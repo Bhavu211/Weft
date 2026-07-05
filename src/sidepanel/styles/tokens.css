@@ -1,0 +1,16 @@
+:root {
+  --canvas: #0c131b;
+  --surface: #141f2a;
+  --surface-2: #1a2732;
+  --hair: #293947;
+  --ink: #e9f1f6;
+  --muted: #7c91a2;
+  --signal: #ff5c8a;
+  --flow: #48cfc2;
+  --warn: #f2a73b;
+  --ok: #5fd08a;
+
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
