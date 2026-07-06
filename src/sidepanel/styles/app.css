@@ -22,3 +22,30 @@ body {
   color: var(--muted);
   font-size: 13px;
 }
+
+.capture-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.btn-start {
+  background: var(--signal);
+  color: var(--canvas);
+}
+
+.btn-stop {
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--hair);
+}
