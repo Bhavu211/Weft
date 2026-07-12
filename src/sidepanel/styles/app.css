@@ -430,3 +430,61 @@ body {
   color: var(--ink);
   border: 1px solid var(--hair);
 }
+
+.brief-shipped {
+  margin-top: 12px;
+  color: var(--ok);
+}
+
+.brief-ship {
+  margin-top: 14px;
+}
+
+.brief-ship-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.brief-ship-input,
+.roi-hourly-cost-input {
+  width: 100px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.roi-panel {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: 8px;
+}
+
+.roi-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin: 10px 0 14px;
+}
+
+.roi-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.roi-value {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  color: var(--ok);
+}
+
+.roi-panel .analysis-flabel {
+  margin-top: 4px;
+}

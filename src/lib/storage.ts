@@ -1,9 +1,11 @@
 import type { CapturedEvent, Opportunity, Session, Thumb } from "../types";
+import { DEFAULT_HOURLY_COST } from "../reconstruct/roi";
 
 const SESSIONS_KEY = "weft_sessions";
 const ACTIVE_SESSION_KEY = "weft_active_session_id";
 const REGISTERS_KEY = "weft_registers";
 const FEEDBACK_KEY = "weft_feedback";
+const HOURLY_COST_KEY = "weft_hourly_cost";
 
 export async function getSessions(): Promise<Record<string, Session>> {
   const result = await chrome.storage.local.get(SESSIONS_KEY);
@@ -75,4 +77,16 @@ export async function setFeedback(nodeId: string, thumb: Thumb): Promise<void> {
   const feedback = await getFeedback();
   feedback[nodeId] = thumb;
   await chrome.storage.local.set({ [FEEDBACK_KEY]: feedback });
+}
+
+// The $/hr assumption behind "money saved" — a buyer-supplied figure in
+// principle (weft-prd.md §13, open decision 4); stored globally so it only
+// has to be set once.
+export async function getHourlyCost(): Promise<number> {
+  const result = await chrome.storage.local.get(HOURLY_COST_KEY);
+  return result[HOURLY_COST_KEY] ?? DEFAULT_HOURLY_COST;
+}
+
+export async function setHourlyCost(value: number): Promise<void> {
+  await chrome.storage.local.set({ [HOURLY_COST_KEY]: value });
 }

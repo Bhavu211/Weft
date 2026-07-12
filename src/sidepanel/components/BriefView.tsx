@@ -6,12 +6,15 @@ export default function BriefView({
   opportunity,
   brief,
   onGenerate,
+  onShip,
 }: {
   opportunity: Opportunity;
   brief: AutomationBrief | null;
   onGenerate: () => void;
+  onShip: (realizedSavingHrs: number) => void;
 }) {
   const [copied, setCopied] = useState<"json" | "markdown" | null>(null);
+  const [realizedInput, setRealizedInput] = useState(() => String(opportunity.estimatedSavingHrs));
 
   async function copy(format: "json" | "markdown") {
     if (!brief) return;
@@ -76,6 +79,36 @@ export default function BriefView({
               Regenerate
             </button>
           </div>
+
+          {opportunity.status === "shipped" ? (
+            <p className="muted brief-shipped">
+              Shipped — realized saving: {opportunity.realizedSavingHrs?.toFixed(1)} hrs/month.
+            </p>
+          ) : (
+            <div className="brief-ship">
+              <label className="analysis-flabel muted" htmlFor="realized-saving">
+                Realized saving (hrs/month) once shipped
+              </label>
+              <div className="brief-ship-row">
+                <input
+                  id="realized-saving"
+                  type="number"
+                  min={0}
+                  step="0.1"
+                  className="brief-ship-input"
+                  value={realizedInput}
+                  onChange={(e) => setRealizedInput(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn btn-confirm"
+                  onClick={() => onShip(Number(realizedInput) || 0)}
+                >
+                  Mark shipped
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

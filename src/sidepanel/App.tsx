@@ -7,6 +7,7 @@ import AnalysisPanel from "./components/AnalysisPanel";
 import Register from "./components/Register";
 import MergedList from "./components/MergedList";
 import BriefView from "./components/BriefView";
+import RoiPanel from "./components/RoiPanel";
 import { getReviewedSessionsForWorkflow, getRegister, getSession, saveRegister } from "../lib/storage";
 import { merge } from "../reconstruct/merge";
 import { generateBrief } from "../brief/generate-brief";
@@ -117,6 +118,16 @@ export default function App() {
     await saveRegister(workflowId, next);
   }
 
+  async function handleMarkShipped(stepId: string, realizedSavingHrs: number) {
+    const workflowId = workflowName.trim();
+    if (!workflowId) return;
+    const next = register.map((o) =>
+      o.stepId === stepId ? { ...o, status: "shipped" as const, realizedSavingHrs } : o
+    );
+    setRegister(next);
+    await saveRegister(workflowId, next);
+  }
+
   const reconstructionFailed =
     pendingEventCount !== null && pendingEventCount > 0 && pendingSteps.length === 0;
 
@@ -176,9 +187,11 @@ export default function App() {
                 opportunity={selectedOpportunity}
                 brief={selectedOpportunity.brief ?? null}
                 onGenerate={() => handleGenerateBrief(selectedOpportunity.stepId)}
+                onShip={(realizedSavingHrs) => handleMarkShipped(selectedOpportunity.stepId, realizedSavingHrs)}
               />
             ) : null}
             <Register opportunities={register} onRemove={handleRemoveFromRegister} />
+            <RoiPanel opportunities={register} />
             <details className="merge-review">
               <summary className="muted">Merge review (which steps were treated as the same)</summary>
               <MergedList result={mergeResult} />
