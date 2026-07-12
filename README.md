@@ -21,9 +21,9 @@ Full context:
 | M5 — Map + analysis + register | ✅ done |
 | M6 — Brief + ticket export | ✅ done |
 | M7 — ROI tracker | ✅ done |
-| M8 — Consent + metrics + polish | ⬜ not started |
+| M8 — Consent + metrics + polish | ✅ done |
 
-See `BUILD.md` for each milestone's gate.
+All 8 MVP milestones are built and gate-verified. See `BUILD.md` for each milestone's gate and `weft-prd.md` §10 (Phase 7) for what comes after — design-partner beta and hardening.
 
 ## Develop
 
