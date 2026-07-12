@@ -6,6 +6,9 @@ import {
   saveSession,
   getActiveSessionId,
   setActiveSessionId,
+  getActiveSessionTabIds,
+  setActiveSessionTabIds,
+  addActiveSessionTabId,
 } from "../lib/storage";
 import { segment } from "../reconstruct/segment";
 import { classify } from "../reconstruct/classify";
@@ -25,19 +28,19 @@ chrome.runtime.onInstalled.addListener(() => {
 // finish before the next one starts.
 let messageQueue: Promise<unknown> = Promise.resolve();
 
-chrome.runtime.onMessage.addListener((message: WeftMessage, _sender, sendResponse) => {
-  messageQueue = messageQueue.then(() => handleMessage(message)).then(sendResponse);
+chrome.runtime.onMessage.addListener((message: WeftMessage, sender, sendResponse) => {
+  messageQueue = messageQueue.then(() => handleMessage(message, sender)).then(sendResponse);
   return true; // keep the message channel open for the async response
 });
 
-async function handleMessage(message: WeftMessage) {
+async function handleMessage(message: WeftMessage, sender: chrome.runtime.MessageSender) {
   switch (message.type) {
     case "START_CAPTURE":
       return startCapture(message.workflowId);
     case "STOP_CAPTURE":
       return stopCapture();
     case "CAPTURE_EVENT":
-      return captureEvent(message);
+      return captureEvent(message, sender);
     case "GET_CAPTURE_STATE":
       return { activeSessionId: await getActiveSessionId() };
     case "CONFIRM_SESSION":
@@ -46,6 +49,20 @@ async function handleMessage(message: WeftMessage) {
       return discardSession(message.sessionId);
   }
 }
+
+// A tab opened from one already in the active session (e.g. a workflow step
+// that opens a link in a new tab) joins the session too; any other tab the
+// user just happens to have open never does. Registered once, at module
+// scope — the "is a session active" check happens per-event, not here.
+chrome.tabs.onCreated.addListener((tab) => {
+  messageQueue = messageQueue.then(async () => {
+    if (tab.id === undefined || tab.openerTabId === undefined) return;
+    const [activeSessionId, tabIds] = await Promise.all([getActiveSessionId(), getActiveSessionTabIds()]);
+    if (activeSessionId && tabIds.includes(tab.openerTabId)) {
+      await addActiveSessionTabId(tab.id);
+    }
+  });
+});
 
 async function startCapture(workflowId: string) {
   const session: Session = {
@@ -57,6 +74,12 @@ async function startCapture(workflowId: string) {
   };
   await saveSession(session);
   await setActiveSessionId(session.id);
+
+  // The tab the side panel is open alongside is the one being recorded;
+  // only it (and tabs opened from it) may contribute events to this session.
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  await setActiveSessionTabIds(activeTab?.id !== undefined ? [activeTab.id] : []);
+
   return { sessionId: session.id };
 }
 
@@ -82,12 +105,24 @@ async function stopCapture() {
     await saveSession(session);
   }
   await setActiveSessionId(null);
+  await setActiveSessionTabIds([]);
   return { stopped: true, sessionId };
 }
 
-async function captureEvent(message: Extract<WeftMessage, { type: "CAPTURE_EVENT" }>) {
+async function captureEvent(
+  message: Extract<WeftMessage, { type: "CAPTURE_EVENT" }>,
+  sender: chrome.runtime.MessageSender
+) {
   const sessionId = await getActiveSessionId();
   if (!sessionId) return { captured: false };
+
+  // Reject events from any tab that isn't part of this recording — a tab
+  // the user just happens to have open elsewhere is not the workflow being
+  // recorded, even though its content script is running too.
+  const tabIds = await getActiveSessionTabIds();
+  if (sender.tab?.id === undefined || !tabIds.includes(sender.tab.id)) {
+    return { captured: false };
+  }
 
   const session = await getSession(sessionId);
   const lastEvent = session?.events[session.events.length - 1];

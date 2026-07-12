@@ -3,6 +3,7 @@ import { DEFAULT_HOURLY_COST } from "../reconstruct/roi";
 
 const SESSIONS_KEY = "weft_sessions";
 const ACTIVE_SESSION_KEY = "weft_active_session_id";
+const ACTIVE_SESSION_TAB_IDS_KEY = "weft_active_session_tab_ids";
 const REGISTERS_KEY = "weft_registers";
 const FEEDBACK_KEY = "weft_feedback";
 const HOURLY_COST_KEY = "weft_hourly_cost";
@@ -31,6 +32,24 @@ export async function getActiveSessionId(): Promise<string | null> {
 
 export async function setActiveSessionId(id: string | null): Promise<void> {
   await chrome.storage.local.set({ [ACTIVE_SESSION_KEY]: id });
+}
+
+// Which tabs are allowed to contribute events to the active session — the
+// tab recording started in, plus any tab opened from one of those (e.g. a
+// workflow step that opens a link in a new tab). Everything else (a tab the
+// user just happened to already have open) is excluded, not swept in.
+export async function getActiveSessionTabIds(): Promise<number[]> {
+  const result = await chrome.storage.local.get(ACTIVE_SESSION_TAB_IDS_KEY);
+  return result[ACTIVE_SESSION_TAB_IDS_KEY] ?? [];
+}
+
+export async function setActiveSessionTabIds(tabIds: number[]): Promise<void> {
+  await chrome.storage.local.set({ [ACTIVE_SESSION_TAB_IDS_KEY]: tabIds });
+}
+
+export async function addActiveSessionTabId(tabId: number): Promise<void> {
+  const tabIds = await getActiveSessionTabIds();
+  if (!tabIds.includes(tabId)) await setActiveSessionTabIds([...tabIds, tabId]);
 }
 
 export async function appendEvent(sessionId: string, event: CapturedEvent): Promise<boolean> {
