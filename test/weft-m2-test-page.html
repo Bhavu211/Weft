@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weft M2 Test — Reconstruction Workflow</title>
+<style>
+  :root{
+    --ink:#0C131B; --muted:#5b6b78; --line:#e2e7ea;
+    --portal:#3b7de0; --kyc:#8a4de0; --ops:#0f9d76;
+    --signal:#e23a6d; --bg:#f6f8fa;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);margin:0;line-height:1.55;}
+  .wrap{max-width:720px;margin:0 auto;padding:26px 20px 80px;}
+  h1{font-size:20px;margin:0 0 4px;}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 20px;}
+
+  .howto{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:18px;font-size:13.5px;}
+  .howto b{color:var(--ink);}
+  .howto ol{margin:8px 0 0;padding-left:20px;}
+  .howto li{margin:4px 0;}
+
+  .stage{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 10px 30px -20px rgba(0,0,0,.25);}
+  .bar{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);}
+  .sysbadge{font-size:12px;font-weight:600;color:#fff;padding:4px 10px;border-radius:100px;}
+  .sys-portal{background:var(--portal);} .sys-kyc{background:var(--kyc);} .sys-ops{background:var(--ops);}
+  .path{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted);}
+  .stepdot{margin-left:auto;font-size:12px;color:var(--muted);font-family:ui-monospace,monospace;}
+
+  .screen{padding:24px 22px 26px;min-height:220px;}
+  .screen h2{font-size:17px;margin:0 0 4px;}
+  .screen .hint{color:var(--muted);font-size:13px;margin:0 0 18px;}
+  label{display:block;font-size:13px;color:#444;margin:12px 0 5px;font-weight:500;}
+  input,select{width:100%;padding:10px;border:1px solid #cdd5db;border-radius:8px;font-size:14px;}
+  .result{background:#f0f7f2;border:1px solid #c7e6d3;border-radius:9px;padding:12px 14px;font-size:13.5px;margin-top:8px;}
+  .waiting{background:#fff7ec;border:1px solid #f4dcb0;border-radius:9px;padding:12px 14px;font-size:13.5px;margin-top:14px;color:#8a5a12;}
+
+  .actions{display:flex;gap:10px;align-items:center;padding:16px 22px;border-top:1px solid var(--line);}
+  button{padding:10px 18px;border:0;border-radius:8px;background:var(--ink);color:#fff;font-size:14px;font-weight:500;cursor:pointer;}
+  button:disabled{opacity:.45;cursor:not-allowed;}
+  button.ghost{background:#fff;color:var(--ink);border:1px solid #cdd5db;}
+  .cross-tag{font-size:11px;color:var(--signal);font-weight:600;margin-left:auto;}
+
+  .truth{margin-top:22px;background:#0C131B;color:#E9F1F6;border-radius:14px;padding:20px 22px;}
+  .truth h3{margin:0 0 4px;font-size:15px;}
+  .truth .t-sub{color:#8aa0b0;font-size:12.5px;margin:0 0 16px;}
+  .gt{list-style:none;margin:0;padding:0;counter-reset:s;}
+  .gt li{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #1e2c38;}
+  .gt li:last-child{border-bottom:none;}
+  .gt .n{counter-increment:s;font-family:ui-monospace,monospace;color:var(--signal);font-size:13px;flex:none;width:22px;}
+  .gt .n::before{content:counter(s);}
+  .gt .txt strong{font-weight:600;}
+  .gt .txt em{font-style:normal;font-family:ui-monospace,monospace;font-size:11px;color:#8aa0b0;display:block;margin-top:2px;}
+  .flag{display:inline-block;font-size:10.5px;font-family:ui-monospace,monospace;padding:2px 7px;border-radius:100px;margin-left:6px;vertical-align:middle;}
+  .flag-x{background:#3a1220;color:#ff9db8;}
+  .flag-w{background:#3a2a0f;color:#f4c777;}
+  details summary{cursor:pointer;color:#8aa0b0;font-size:12.5px;margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Weft M2 test — reconstruction workflow</h1>
+  <p class="sub">A controlled 6-step workflow across 3 "systems," with a built-in idle wait. Record it with Weft, then compare Weft's step list to the ground truth at the bottom.</p>
+
+  <div class="howto">
+    <b>How to run this test</b>
+    <ol>
+      <li>Make sure <code>npm run dev</code> is running and the Weft extension is reloaded.</li>
+      <li>Open the Weft side panel → <b>Start recording</b>.</li>
+      <li>Complete this workflow below, screen by screen, at a natural pace. <b>Let the "Verifying…" wait finish</b> — it's deliberately long, to test Weft's idle detection.</li>
+      <li>Click <b>Stop recording</b>.</li>
+      <li>Read Weft's step list, then compare it to the <b>Ground truth</b> panel at the bottom of this page.</li>
+    </ol>
+    <div style="margin-top:8px;color:var(--muted)">Tip: for best results serve this over <code>http://localhost</code> (so path/domain populate). It still works opened as a file — segmentation is driven by clicks, submits, and the idle gap regardless.</div>
+  </div>
+
+  <div class="stage">
+    <div class="bar">
+      <span class="sysbadge sys-portal" id="sysBadge">Partner Portal</span>
+      <span class="path" id="pathLabel">/onboarding/applicant</span>
+      <span class="stepdot" id="stepDot">screen 1 / 6</span>
+    </div>
+    <div class="screen" id="screen"></div>
+    <div class="actions" id="actions"></div>
+  </div>
+
+  <div class="truth">
+    <h3>Ground truth — the "right answer" for this workflow</h3>
+    <p class="t-sub">Weft's reconstruction passes M2 if its steps match this list in order, with only minor errors. <span class="flag flag-x">cross-system</span> = a system switch Weft should flag. <span class="flag flag-w">wait</span> = an idle gap Weft should treat as a boundary / bottleneck.</p>
+    <ol class="gt">
+      <li><span class="n"></span><span class="txt"><strong>Enter applicant details</strong><em>Partner Portal · /onboarding/applicant</em></span></li>
+      <li><span class="n"></span><span class="txt"><strong>Enter tax identifiers (PAN / GST)</strong><em>Partner Portal · /onboarding/tax-ids</em></span></li>
+      <li><span class="n"></span><span class="txt"><strong>Run KYC verification</strong> <span class="flag flag-x">cross-system</span> <span class="flag flag-w">wait</span><em>KYC Suite · /kyc/verify · switched systems here, then a long idle wait</em></span></li>
+      <li><span class="n"></span><span class="txt"><strong>Review KYC result</strong><em>KYC Suite · /kyc/result</em></span></li>
+      <li><span class="n"></span><span class="txt"><strong>Approve &amp; provision</strong> <span class="flag flag-x">cross-system</span><em>Partner Portal · /onboarding/approve · switched back to portal</em></span></li>
+      <li><span class="n"></span><span class="txt"><strong>Update tracking sheet</strong> <span class="flag flag-x">cross-system</span><em>Ops Sheet · /sheet/partners · switched systems again</em></span></li>
+    </ol>
+    <details>
+      <summary>What "minor errors" looks like (still a pass)</summary>
+      <div style="font-size:12.5px;color:#8aa0b0;margin-top:8px;">Two adjacent steps merged into one, a slightly-off label, or one extra boundary — all fine. A <b>fail</b> is: wrong order, a real step missing, one step exploding into many noise-events, or the 3 cross-system switches / the wait not being detected at all.</div>
+    </details>
+  </div>
+</div>
+
+<script>
+const SCREENS = [
+  {sys:"Partner Portal", cls:"sys-portal", path:"/onboarding/applicant", title:"Applicant details",
+   hint:"Enter the new partner's basic details.",
+   fields:[{label:"Partner name",id:"pname"},{label:"Company",id:"company"}], action:"Continue"},
+  {sys:"Partner Portal", cls:"sys-portal", path:"/onboarding/tax-ids", title:"Tax identifiers",
+   hint:"Enter tax IDs, then submit to the KYC system.",
+   fields:[{label:"PAN",id:"pan"},{label:"GST",id:"gst"}], action:"Submit to KYC", crossNext:true},
+  {sys:"KYC Suite", cls:"sys-kyc", path:"/kyc/verify", title:"Run KYC verification",
+   hint:"You've switched to the KYC Suite. Run the check — it takes a moment.",
+   wait:true, action:"Run verification"},
+  {sys:"KYC Suite", cls:"sys-kyc", path:"/kyc/result", title:"Review KYC result",
+   hint:"Read the verification result and accept it.",
+   result:"KYC PASSED — no adverse records found. Risk band: LOW.", action:"Accept result", crossNext:true},
+  {sys:"Partner Portal", cls:"sys-portal", path:"/onboarding/approve", title:"Approve & provision",
+   hint:"Back in the Partner Portal. Approve to provision the partner.",
+   fields:[{label:"Approval note",id:"note"}], action:"Approve", crossNext:true},
+  {sys:"Ops Sheet", cls:"sys-ops", path:"/sheet/partners", title:"Update tracking sheet",
+   hint:"Finally, record the outcome in the ops sheet.",
+   fields:[{label:"Row status",id:"status"}], action:"Save & finish"},
+];
+
+const WAIT_SECONDS = 9; // deliberately > default 8s idle threshold
+let i = 0;
+
+const el = id => document.getElementById(id);
+function render(){
+  const s = SCREENS[i];
+  el('sysBadge').textContent = s.sys;
+  el('sysBadge').className = "sysbadge " + s.cls;
+  el('pathLabel').textContent = s.path;
+  el('stepDot').textContent = `screen ${i+1} / ${SCREENS.length}`;
+  try { history.pushState({}, "", s.path); } catch(e){ /* file:// blocks pushState; ignore */ }
+
+  const scr = el('screen');
+  let html = `<h2>${s.title}</h2><p class="hint">${s.hint}</p>`;
+  if(s.fields){ s.fields.forEach(f=>{
+    html += `<label for="${f.id}">${f.label}</label><input id="${f.id}" name="${f.id}" aria-label="${f.label}">`;
+  });}
+  if(s.result){ html += `<div class="result">${s.result}</div>`; }
+  if(s.wait){ html += `<div id="waitBox" class="waiting" style="display:none">Verifying… simulating a real wait (~${WAIT_SECONDS}s) so Weft sees an idle gap. <span id="cd"></span></div>`; }
+  scr.innerHTML = html;
+
+  const act = el('actions');
+  const crossTag = s.crossNext ? `<span class="cross-tag">↳ next step switches systems</span>` : "";
+  act.innerHTML = `<button id="primary">${s.action}</button>${i>0?'<button class="ghost" id="restart">Restart</button>':''}${crossTag}`;
+  el('primary').onclick = () => onAction(s);
+  const rb = el('restart'); if(rb) rb.onclick = restart;
+}
+
+function onAction(s){
+  if(s.wait){
+    // simulate processing: disable, count down, then advance
+    const btn = el('primary'); btn.disabled = true; btn.textContent = "Verifying…";
+    const box = el('waitBox'); box.style.display = "block";
+    let left = WAIT_SECONDS;
+    el('cd').textContent = `(${left}s)`;
+    const t = setInterval(()=>{
+      left--; el('cd').textContent = left>0?`(${left}s)`:"done";
+      if(left<=0){ clearInterval(t); advance(); }
+    },1000);
+    return;
+  }
+  advance();
+}
+
+function advance(){
+  if(i < SCREENS.length-1){ i++; render(); }
+  else {
+    el('screen').innerHTML = `<h2>Workflow complete ✅</h2><p class="hint">Now click <b>Stop recording</b> in Weft, then compare its step list to the ground truth below.</p>`;
+    el('actions').innerHTML = `<button class="ghost" id="restart">Run again</button>`;
+    el('restart').onclick = restart;
+    el('stepDot').textContent = "done";
+  }
+}
+function restart(){ i=0; render(); }
+render();
+</script>
+</body>
+</html>

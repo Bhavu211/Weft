@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weft M1 Test — Seeded PII Page</title>
+<style>
+  body{font-family:system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 20px;color:#111;line-height:1.5;}
+  h1{font-size:20px;} h2{font-size:15px;margin-top:28px;color:#444;}
+  .card{border:1px solid #ddd;border-radius:10px;padding:18px;margin:14px 0;}
+  label{display:block;font-size:13px;color:#555;margin:10px 0 4px;}
+  input,select{width:100%;padding:9px;border:1px solid #ccc;border-radius:7px;font-size:14px;}
+  button{margin-top:14px;padding:10px 16px;border:0;border-radius:7px;background:#0C131B;color:#fff;font-size:14px;cursor:pointer;}
+  .seed{background:#fff4f6;border:1px solid #ffd0dc;border-radius:8px;padding:10px 12px;font-size:13px;color:#8a2a44;margin:10px 0;}
+  code{background:#f2f2f2;padding:1px 5px;border-radius:4px;}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px;}
+  td,th{border:1px solid #e2e2e2;padding:7px 9px;text-align:left;}
+</style>
+</head>
+<body>
+  <h1>Weft M1 test page — seeded with fake PII</h1>
+  <p>This page deliberately contains fake sensitive data in three places: <b>form values</b>, <b>the URL query string</b>, and <b>on-screen page content</b>. Record a session across it, then inspect <code>chrome.storage.local</code>. None of the seeded strings below should appear in stored data.</p>
+
+  <div class="seed">
+    Seeded secrets to hunt for afterwards:<br>
+    PAN <code>ABCDE1234F</code> · GST <code>22ABCDE1234F1Z5</code> · email <code>test.user@example.com</code> · card <code>4111 1111 1111 1111</code> · name <code>Bhawna Sharma</code>
+  </div>
+
+  <div class="card">
+    <h2>1 · Form values (type into these)</h2>
+    <label for="pan">PAN</label>
+    <input id="pan" name="pan" placeholder="e.g. ABCDE1234F" aria-label="PAN">
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" placeholder="e.g. test.user@example.com" aria-label="Email">
+    <label for="acct">Account number</label>
+    <input id="acct" name="account" placeholder="e.g. 4111 1111 1111 1111" aria-label="Account number">
+    <label for="tier">Partner tier</label>
+    <select id="tier" name="tier" aria-label="Partner tier"><option>Gold</option><option>Silver</option></select>
+    <button id="submitBtn" type="button" onclick="go()">Submit &amp; continue</button>
+  </div>
+
+  <div class="card">
+    <h2>2 · Page-content PII (rendered text, not a field)</h2>
+    <p>Applicant of record: <b>Bhawna Sharma</b>, contactable at <b>test.user@example.com</b>.</p>
+    <table>
+      <tr><th>Field</th><th>Value</th></tr>
+      <tr><td>PAN</td><td>ABCDE1234F</td></tr>
+      <tr><td>GST</td><td>22ABCDE1234F1Z5</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>3 · Query-string PII (click to reload with secrets in the URL)</h2>
+    <p>Current URL query: <code id="q">(none)</code></p>
+    <button type="button" onclick="location.search='?email=test.user@example.com&pan=ABCDE1234F&id=99'">Add secrets to URL &amp; reload</button>
+  </div>
+
+  <script>
+    document.getElementById('q').textContent = location.search || '(none)';
+    function go(){ alert('Submitted (test). Now stop the Weft capture and inspect storage.'); }
+  </script>
+</body>
+</html>
