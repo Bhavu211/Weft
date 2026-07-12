@@ -189,3 +189,91 @@ describe("merge — sessions with an equal-length two-step swap", () => {
     expect(edge).toMatchObject({ occurrence: 1, totalSessions: 3 });
   });
 });
+
+// A ragged branch: the variant takes one MORE step than the main path to
+// reach the same reconvergence point ("Approve" vs "Escalate" then
+// "Escalate Notify", before everyone continues to "Step Z"). Unequal-length
+// gaps used to fall back to passing the reference through unchanged and
+// bolting the session's extra steps onto the very end of the whole
+// timeline — implying "Escalate Notify" happened after Z, not before it.
+function raggedHappyPathSession(id: string): Session {
+  return {
+    id,
+    workflowId: "wf-generic",
+    startedAt: 0,
+    endedAt: 4_000,
+    reviewed: true,
+    events: [
+      stepEvent(`${id}-1`, 0, "/a", "Step A"),
+      stepEvent(`${id}-2`, 1_000, "/b", "Step B"),
+      stepEvent(`${id}-3`, 2_000, "/approve", "Approve"),
+      stepEvent(`${id}-4`, 3_000, "/z", "Step Z"),
+    ],
+  };
+}
+
+function raggedBranchSession(id: string): Session {
+  return {
+    id,
+    workflowId: "wf-generic",
+    startedAt: 0,
+    endedAt: 5_000,
+    reviewed: true,
+    events: [
+      stepEvent(`${id}-1`, 0, "/a", "Step A"),
+      stepEvent(`${id}-2`, 1_000, "/b", "Step B"),
+      stepEvent(`${id}-3`, 2_000, "/escalate", "Escalate"),
+      stepEvent(`${id}-4`, 3_000, "/escalate-notify", "Escalate Notify"),
+      stepEvent(`${id}-5`, 4_000, "/z", "Step Z"),
+    ],
+  };
+}
+
+describe("merge — sessions with a ragged (unequal-length) branch", () => {
+  const result = merge([raggedHappyPathSession("s1"), raggedHappyPathSession("s2"), raggedBranchSession("s3")]);
+
+  it("keeps Approve as the main path and pairs Escalate as its sibling at the same position", () => {
+    const approve = result.nodes.find((n) => n.label === "Approve")!;
+    const escalate = result.nodes.find((n) => n.label === "Escalate")!;
+
+    expect(approve).toMatchObject({ occurrence: 2, totalSessions: 3, isMainPath: true, isException: false });
+    expect(escalate.order).toBe(approve.order);
+    expect(escalate).toMatchObject({ occurrence: 1, totalSessions: 3, isMainPath: false, isException: true });
+  });
+
+  it("places the branch's extra step right after the paired position, not at the end of the timeline", () => {
+    const escalate = result.nodes.find((n) => n.label === "Escalate")!;
+    const escalateNotify = result.nodes.find((n) => n.label === "Escalate Notify")!;
+    const stepZ = result.nodes.find((n) => n.label === "Step Z")!;
+
+    expect(escalateNotify.order).toBe(escalate.order + 1);
+    expect(escalateNotify).toMatchObject({ occurrence: 1, totalSessions: 3, isMainPath: true, isException: false });
+    expect(stepZ.order).toBeGreaterThan(escalateNotify.order);
+  });
+
+  it("still recognizes Step Z as one shared reconvergence node, not fragmented", () => {
+    const stepZ = result.nodes.filter((n) => n.label === "Step Z");
+    expect(stepZ).toHaveLength(1);
+    expect(stepZ[0]).toMatchObject({ occurrence: 3, totalSessions: 3, isMainPath: true, isException: false });
+  });
+
+  it("produces exactly 6 nodes total (A, B, Approve/Escalate pair, Escalate Notify, Z)", () => {
+    expect(result.nodes).toHaveLength(6);
+  });
+
+  it("wires the branch's edges correctly: B -> Escalate -> Escalate Notify -> Z", () => {
+    const stepB = result.nodes.find((n) => n.label === "Step B")!;
+    const escalate = result.nodes.find((n) => n.label === "Escalate")!;
+    const escalateNotify = result.nodes.find((n) => n.label === "Escalate Notify")!;
+    const stepZ = result.nodes.find((n) => n.label === "Step Z")!;
+
+    const edge = (from: string, to: string) => result.edges.find((e) => e.from === from && e.to === to);
+
+    expect(edge(stepB.id, escalate.id)).toMatchObject({ occurrence: 1, totalSessions: 3 });
+    expect(edge(escalate.id, escalateNotify.id)).toMatchObject({ occurrence: 1, totalSessions: 3 });
+    expect(edge(escalateNotify.id, stepZ.id)).toMatchObject({ occurrence: 1, totalSessions: 3 });
+
+    const approve = result.nodes.find((n) => n.label === "Approve")!;
+    expect(edge(approve.id, stepZ.id)).toMatchObject({ occurrence: 2, totalSessions: 3 });
+  });
+});

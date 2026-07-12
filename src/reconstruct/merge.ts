@@ -101,19 +101,17 @@ function computeAnchors(slotKeys: Set<string>[], stepKeys: string[]): [number, n
 // Folds one session's steps into the running reference timeline, aligning
 // on step identity rather than raw position:
 //   - matched steps merge into the existing slot's matching candidate.
-//   - a gap of N reference slots facing N session steps (nothing to anchor
-//     either side, same length on both sides) reads as a compound branch:
-//     the session took a different, same-length sequence of steps at this
-//     same position, so each position pairs up as sibling candidates on
-//     that slot rather than being appended after. A single-step swap is
-//     just the N=1 case of this.
-//   - an unequal-length gap (a pure insertion, a pure deletion, or a swap
-//     where the branch took a different *number* of steps) passes
-//     reference-only slots through unchanged and appends session-only
-//     steps as new slots in order. This is the documented MVP fallback for
-//     a divergence that isn't a same-length swap (weft-prd.md §13, open
-//     decision 3) — still legible, still reviewable via `alignments`, just
-//     not perfectly aligned.
+//   - a gap facing a gap (neither side anchored — nothing before the next
+//     match on either side lines up) is the branch itself: pair up
+//     positions on each side, front to back, as sibling candidates on the
+//     same slot, for as many positions as both sides have (a single-step
+//     swap is just that with one position). If one side has more steps
+//     than the other — the branch took a different number of steps to get
+//     to the same reconvergence point — the extra steps on the longer side
+//     continue right after the paired positions as their own slots, still
+//     before the next anchor, rather than a pure insertion/deletion
+//     (nothing paired at all) which just passes reference-only slots
+//     through unchanged and appends session-only steps in order.
 function foldSessionIntoReference(reference: Slot[], sessionId: string, steps: ClassifiedStep[]): Slot[] {
   const slotKeys = reference.map((slot) => new Set(slot.candidates.map((c) => c.key)));
   const stepKeys = steps.map(stepKey);
@@ -122,20 +120,16 @@ function foldSessionIntoReference(reference: Slot[], sessionId: string, steps: C
   const result: Slot[] = [];
 
   function appendGap(refFrom: number, refTo: number, stepFrom: number, stepTo: number) {
-    const refGapLen = refTo - refFrom;
-    const stepGapLen = stepTo - stepFrom;
+    const pairedLen = Math.min(refTo - refFrom, stepTo - stepFrom);
 
-    if (refGapLen === stepGapLen && refGapLen > 0) {
-      for (let k = 0; k < refGapLen; k++) {
-        const slot = reference[refFrom + k];
-        const step = steps[stepFrom + k];
-        result.push({ candidates: [...slot.candidates, newCandidate(sessionId, step)] });
-      }
-      return;
+    for (let k = 0; k < pairedLen; k++) {
+      const slot = reference[refFrom + k];
+      const step = steps[stepFrom + k];
+      result.push({ candidates: [...slot.candidates, newCandidate(sessionId, step)] });
     }
 
-    for (let k = refFrom; k < refTo; k++) result.push(reference[k]);
-    for (let k = stepFrom; k < stepTo; k++) result.push({ candidates: [newCandidate(sessionId, steps[k])] });
+    for (let k = refFrom + pairedLen; k < refTo; k++) result.push(reference[k]);
+    for (let k = stepFrom + pairedLen; k < stepTo; k++) result.push({ candidates: [newCandidate(sessionId, steps[k])] });
   }
 
   let refPtr = 0;
