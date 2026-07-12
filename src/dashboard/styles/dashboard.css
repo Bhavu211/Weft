@@ -260,3 +260,48 @@ body {
   min-width: 320px;
   max-width: 100%;
 }
+
+.kpi-subheading {
+  font-family: var(--font-display);
+  font-size: 15px;
+  margin: 24px 0 12px;
+}
+
+.capability-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.capability-bar-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 28px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.capability-bar-label {
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+.capability-bar-track {
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.capability-bar-fill {
+  background: var(--flow);
+  height: 100%;
+  border-radius: 999px;
+}
+
+.capability-bar-count {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  text-align: right;
+}

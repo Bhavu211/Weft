@@ -4,17 +4,20 @@ import WorkflowIntelligence from "./components/WorkflowIntelligence";
 import AIOpportunityRegister from "./components/AIOpportunityRegister";
 import AutomationPipeline from "./components/AutomationPipeline";
 import AutomationBriefViewer from "./components/AutomationBriefViewer";
+import BusinessKPIs from "./components/BusinessKPIs";
 import { getAllRegisters, getAllSessions, getFeedback, getHourlyCost, saveRegister } from "../lib/storage";
 import { computeExecutiveSummary, type ExecutiveSummary as ExecutiveSummaryData } from "./executive-summary";
 import { computeWorkflowIntelligence, type WorkflowSummary } from "./workflow-intelligence";
 import { computeAIOpportunityRegister } from "./ai-register";
 import { advanceOpportunity, computeAutomationPipeline, statusAfterBriefGenerated } from "../lib/pipeline";
 import { generateBrief } from "../brief/generate-brief";
+import { computeBusinessKPIs } from "./business-kpis";
 import type { Opportunity, Thumb } from "../types";
 
-// Dashboard 1 — Process Intelligence: "what should we automate?" Built one
-// section at a time; Business KPIs arrives in a later milestone and gets
-// added below as it's built, not all at once.
+// Dashboard 1 — Process Intelligence: "what should we automate?" All six
+// planned sections are now built: Executive Summary, Workflow Intelligence,
+// AI Opportunity Register, Automation Pipeline, Automation Brief, and
+// Business KPIs.
 export default function Dashboard() {
   const [summary, setSummary] = useState<ExecutiveSummaryData | null>(null);
   const [workflows, setWorkflows] = useState<WorkflowSummary[] | null>(null);
@@ -44,6 +47,10 @@ export default function Dashboard() {
     [registers, feedback, hourlyCost]
   );
   const pipelineColumns = useMemo(() => (registers ? computeAutomationPipeline(registers) : null), [registers]);
+  const businessKpis = useMemo(
+    () => (summary && workflows && registerEntries ? computeBusinessKPIs(summary, workflows, registerEntries) : null),
+    [summary, workflows, registerEntries]
+  );
 
   async function handleAdvance(workflowId: string, stepId: string) {
     if (!registers) return;
@@ -76,6 +83,7 @@ export default function Dashboard() {
       {registerEntries ? <AIOpportunityRegister entries={registerEntries} /> : null}
       {pipelineColumns ? <AutomationPipeline columns={pipelineColumns} onAdvance={handleAdvance} /> : null}
       {registers ? <AutomationBriefViewer registers={registers} onGenerate={handleGenerateBrief} /> : null}
+      {businessKpis ? <BusinessKPIs kpis={businessKpis} /> : null}
     </div>
   );
 }
