@@ -6,6 +6,7 @@ const ACTIVE_SESSION_KEY = "weft_active_session_id";
 const REGISTERS_KEY = "weft_registers";
 const FEEDBACK_KEY = "weft_feedback";
 const HOURLY_COST_KEY = "weft_hourly_cost";
+const CONSENT_KEY = "weft_consent_acknowledged";
 
 export async function getSessions(): Promise<Record<string, Session>> {
   const result = await chrome.storage.local.get(SESSIONS_KEY);
@@ -89,4 +90,14 @@ export async function getHourlyCost(): Promise<number> {
 
 export async function setHourlyCost(value: number): Promise<void> {
   await chrome.storage.local.set({ [HOURLY_COST_KEY]: value });
+}
+
+// First-run consent (FR-14): capture is blocked in the UI until this is true.
+export async function getConsentAcknowledged(): Promise<boolean> {
+  const result = await chrome.storage.local.get(CONSENT_KEY);
+  return Boolean(result[CONSENT_KEY]);
+}
+
+export async function setConsentAcknowledged(): Promise<void> {
+  await chrome.storage.local.set({ [CONSENT_KEY]: true });
 }

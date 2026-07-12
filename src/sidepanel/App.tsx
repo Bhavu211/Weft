@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CaptureControls from "./components/CaptureControls";
 import StepList from "./components/StepList";
 import PrivacyPreview from "./components/PrivacyPreview";
@@ -8,13 +8,32 @@ import Register from "./components/Register";
 import MergedList from "./components/MergedList";
 import BriefView from "./components/BriefView";
 import RoiPanel from "./components/RoiPanel";
-import { getReviewedSessionsForWorkflow, getRegister, getSession, saveRegister } from "../lib/storage";
+import ConsentScreen from "./components/ConsentScreen";
+import {
+  getReviewedSessionsForWorkflow,
+  getRegister,
+  getSession,
+  saveRegister,
+  getConsentAcknowledged,
+  setConsentAcknowledged,
+} from "../lib/storage";
+import {
+  getMetricCounters,
+  computeMetricRates,
+  recordFirstMergedMap,
+  recordOpportunityAnalyzed,
+  recordOpportunityAccepted,
+  recordOpportunityShipped,
+  type MetricRates,
+} from "../lib/metrics";
 import { merge } from "../reconstruct/merge";
 import { generateBrief } from "../brief/generate-brief";
 import type { ClassifiedStep, MergeResult, MergedNode, Opportunity } from "../types";
 import type { ConfirmSessionResponse, DiscardSessionResponse } from "../background/messages";
 
 export default function App() {
+  const [consentAcknowledged, setConsentAcknowledgedState] = useState<boolean | null>(null);
+  const [metricRates, setMetricRates] = useState<MetricRates | null>(null);
   const [workflowName, setWorkflowName] = useState("");
   const [steps, setSteps] = useState<ClassifiedStep[]>([]);
   const [mergeResult, setMergeResult] = useState<MergeResult | null>(null);
@@ -26,6 +45,29 @@ export default function App() {
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
   const [pendingSteps, setPendingSteps] = useState<ClassifiedStep[]>([]);
   const [pendingEventCount, setPendingEventCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    getConsentAcknowledged().then(setConsentAcknowledgedState);
+    refreshMetrics();
+  }, []);
+
+  async function refreshMetrics() {
+    setMetricRates(computeMetricRates(await getMetricCounters()));
+  }
+
+  async function handleAcknowledgeConsent() {
+    await setConsentAcknowledged();
+    setConsentAcknowledgedState(true);
+  }
+
+  async function handleSelectNode(nodeId: string) {
+    setSelectedNodeId(nodeId);
+    const node = mergeResult?.nodes.find((n) => n.id === nodeId);
+    if (node?.isOpportunity) {
+      await recordOpportunityAnalyzed();
+      await refreshMetrics();
+    }
+  }
 
   async function handleStopped(sessionId: string) {
     const session = await getSession(sessionId);
@@ -70,9 +112,14 @@ export default function App() {
       getReviewedSessionsForWorkflow(workflowId),
       getRegister(workflowId),
     ]);
-    setMergeResult(merge(sessions));
+    const result = merge(sessions);
+    setMergeResult(result);
     setRegister(savedRegister);
     setSelectedNodeId(null);
+    if (result.nodes.length > 0) {
+      await recordFirstMergedMap();
+      await refreshMetrics();
+    }
   }
 
   async function handleAddToRegister(node: MergedNode) {
@@ -97,6 +144,8 @@ export default function App() {
     const next = [...register.filter((o) => o.stepId !== node.id), opportunity];
     setRegister(next);
     await saveRegister(workflowId, next);
+    await recordOpportunityAccepted();
+    await refreshMetrics();
   }
 
   async function handleRemoveFromRegister(stepId: string) {
@@ -126,6 +175,8 @@ export default function App() {
     );
     setRegister(next);
     await saveRegister(workflowId, next);
+    await recordOpportunityShipped();
+    await refreshMetrics();
   }
 
   const reconstructionFailed =
@@ -133,6 +184,16 @@ export default function App() {
 
   const selectedNode = mergeResult?.nodes.find((n) => n.id === selectedNodeId) ?? null;
   const selectedOpportunity = selectedNode ? register.find((o) => o.stepId === selectedNode.id) ?? null : null;
+
+  if (consentAcknowledged === null) return null;
+
+  if (!consentAcknowledged) {
+    return (
+      <div className="app">
+        <ConsentScreen onAcknowledge={handleAcknowledgeConsent} />
+      </div>
+    );
+  }
 
   return (
     <div className="app">
@@ -171,7 +232,7 @@ export default function App() {
         </button>
         {mergeResult ? (
           <>
-            <WorkflowMap result={mergeResult} selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+            <WorkflowMap result={mergeResult} selectedNodeId={selectedNodeId} onSelectNode={handleSelectNode} />
             {selectedNode ? (
               <AnalysisPanel
                 node={selectedNode}
@@ -199,6 +260,20 @@ export default function App() {
           </>
         ) : null}
       </div>
+      {metricRates ? (
+        <details className="metrics-panel">
+          <summary className="muted">Metrics</summary>
+          <ul className="metrics-list">
+            <li className="muted">Activation (reached a first merged map): {metricRates.activationReached ? "yes" : "not yet"}</li>
+            <li className="muted">
+              Accept rate: {metricRates.acceptRatePct === null ? "not enough data yet" : `${metricRates.acceptRatePct.toFixed(0)}%`}
+            </li>
+            <li className="muted">
+              Loop-closure rate: {metricRates.loopClosurePct === null ? "not enough data yet" : `${metricRates.loopClosurePct.toFixed(0)}%`}
+            </li>
+          </ul>
+        </details>
+      ) : null}
     </div>
   );
 }

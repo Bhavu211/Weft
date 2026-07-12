@@ -4,7 +4,12 @@ import type { MergeResult } from "../../types";
 // graph (WorkflowMap/StepNode) with pan/zoom and click-to-analyze arrives in M5.
 export default function MergedList({ result }: { result: MergeResult }) {
   if (result.nodes.length === 0) {
-    return <p className="muted">No reviewed sessions to merge yet.</p>;
+    return (
+      <p className="muted">
+        No reviewed sessions yet — record this workflow at least twice, confirm each in the
+        privacy preview, then merge.
+      </p>
+    );
   }
 
   const alignmentFor = (nodeId: string) => result.alignments.find((a) => a.nodeId === nodeId);

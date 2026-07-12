@@ -488,3 +488,63 @@ body {
 .roi-panel .analysis-flabel {
   margin-top: 4px;
 }
+
+.consent-screen {
+  max-width: 100%;
+}
+
+.consent-lede {
+  font-size: 14px;
+  margin: 4px 0 16px;
+}
+
+.consent-section {
+  margin-bottom: 14px;
+}
+
+.consent-section h2 {
+  font-family: var(--font-display);
+  font-size: 13px;
+  margin: 0 0 4px;
+}
+
+.consent-section p {
+  font-size: 13px;
+  margin: 0;
+  color: var(--muted);
+}
+
+.consent-rules {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.consent-rules li {
+  margin-bottom: 6px;
+}
+
+.consent-ack {
+  margin-top: 8px;
+}
+
+.metrics-panel {
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hair);
+}
+
+.metrics-panel summary {
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.metrics-list {
+  margin: 8px 0 0;
+  padding-left: 16px;
+}
+
+.metrics-list li {
+  margin-bottom: 4px;
+}

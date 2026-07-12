@@ -38,7 +38,12 @@ export default function WorkflowMap({
   }, [result, selectedNodeId]);
 
   if (result.nodes.length === 0) {
-    return <p className="muted">No reviewed sessions to merge yet.</p>;
+    return (
+      <p className="muted">
+        No reviewed sessions yet — record this workflow at least twice, confirm each in the
+        privacy preview, then merge.
+      </p>
+    );
   }
 
   return (
