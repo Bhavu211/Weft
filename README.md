@@ -16,7 +16,7 @@ Full context:
 | M0 — Scaffold | ✅ done |
 | M1 — Capture + masking + PII redaction | ✅ done |
 | M2 — Reconstruction spike (segment + classify) | ✅ done |
-| M3 — Privacy preview | ⬜ not started |
+| M3 — Privacy preview | ✅ done |
 | M4 — Multi-session merge | ⬜ not started |
 | M5 — Map + analysis + register | ⬜ not started |
 | M6 — Brief + ticket export | ⬜ not started |
