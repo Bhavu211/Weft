@@ -244,3 +244,19 @@ body {
   font-size: 11px;
   padding: 5px 8px;
 }
+
+.brief-picker {
+  margin-bottom: 16px;
+}
+
+.brief-picker-select {
+  font-family: var(--font-body);
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  padding: 8px 12px;
+  min-width: 320px;
+  max-width: 100%;
+}

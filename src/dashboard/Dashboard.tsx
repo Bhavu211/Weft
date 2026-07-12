@@ -3,16 +3,18 @@ import ExecutiveSummary from "./components/ExecutiveSummary";
 import WorkflowIntelligence from "./components/WorkflowIntelligence";
 import AIOpportunityRegister from "./components/AIOpportunityRegister";
 import AutomationPipeline from "./components/AutomationPipeline";
+import AutomationBriefViewer from "./components/AutomationBriefViewer";
 import { getAllRegisters, getAllSessions, getFeedback, getHourlyCost, saveRegister } from "../lib/storage";
 import { computeExecutiveSummary, type ExecutiveSummary as ExecutiveSummaryData } from "./executive-summary";
 import { computeWorkflowIntelligence, type WorkflowSummary } from "./workflow-intelligence";
 import { computeAIOpportunityRegister } from "./ai-register";
-import { advanceOpportunity, computeAutomationPipeline } from "./pipeline";
+import { advanceOpportunity, computeAutomationPipeline, statusAfterBriefGenerated } from "../lib/pipeline";
+import { generateBrief } from "../brief/generate-brief";
 import type { Opportunity, Thumb } from "../types";
 
 // Dashboard 1 — Process Intelligence: "what should we automate?" Built one
-// section at a time; the Automation Brief viewer and Business KPIs arrive in
-// later milestones and get added below as they're built, not all at once.
+// section at a time; Business KPIs arrives in a later milestone and gets
+// added below as it's built, not all at once.
 export default function Dashboard() {
   const [summary, setSummary] = useState<ExecutiveSummaryData | null>(null);
   const [workflows, setWorkflows] = useState<WorkflowSummary[] | null>(null);
@@ -52,6 +54,17 @@ export default function Dashboard() {
     await saveRegister(workflowId, nextWorkflowRegister);
   }
 
+  async function handleGenerateBrief(workflowId: string, stepId: string) {
+    if (!registers) return;
+    const workflowRegister = registers[workflowId] ?? [];
+    const nextWorkflowRegister = workflowRegister.map((o) =>
+      o.stepId === stepId ? { ...o, brief: generateBrief(o), status: statusAfterBriefGenerated(o.status) } : o
+    );
+    const nextRegisters = { ...registers, [workflowId]: nextWorkflowRegister };
+    setRegisters(nextRegisters);
+    await saveRegister(workflowId, nextWorkflowRegister);
+  }
+
   return (
     <div className="dashboard">
       <header className="dashboard-header">
@@ -62,6 +75,7 @@ export default function Dashboard() {
       {workflows ? <WorkflowIntelligence workflows={workflows} /> : null}
       {registerEntries ? <AIOpportunityRegister entries={registerEntries} /> : null}
       {pipelineColumns ? <AutomationPipeline columns={pipelineColumns} onAdvance={handleAdvance} /> : null}
+      {registers ? <AutomationBriefViewer registers={registers} onGenerate={handleGenerateBrief} /> : null}
     </div>
   );
 }

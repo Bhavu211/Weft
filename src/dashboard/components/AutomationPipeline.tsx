@@ -1,4 +1,4 @@
-import type { PipelineColumn } from "../pipeline";
+import type { PipelineColumn } from "../../lib/pipeline";
 
 export default function AutomationPipeline({
   columns,

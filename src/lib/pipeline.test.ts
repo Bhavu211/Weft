@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advanceOpportunity, computeAutomationPipeline, nextStage, stageLabel } from "./pipeline";
+import { advanceOpportunity, computeAutomationPipeline, nextStage, stageLabel, statusAfterBriefGenerated } from "./pipeline";
 import type { Opportunity } from "../types";
 
 function opportunity(overrides: Partial<Opportunity> = {}): Opportunity {
@@ -61,6 +61,20 @@ describe("stageLabel", () => {
   it("gives a human label for each stage", () => {
     expect(stageLabel("identified")).toBe("New");
     expect(stageLabel("sent_to_engineering")).toBe("Sent to Engineering");
+  });
+});
+
+describe("statusAfterBriefGenerated", () => {
+  it("bumps any pre-spec stage up to specced", () => {
+    expect(statusAfterBriefGenerated("identified")).toBe("specced");
+    expect(statusAfterBriefGenerated("reviewed")).toBe("specced");
+    expect(statusAfterBriefGenerated("approved")).toBe("specced");
+  });
+
+  it("leaves specced and later stages untouched", () => {
+    expect(statusAfterBriefGenerated("specced")).toBe("specced");
+    expect(statusAfterBriefGenerated("sent_to_engineering")).toBe("sent_to_engineering");
+    expect(statusAfterBriefGenerated("shipped")).toBe("shipped");
   });
 });
 
