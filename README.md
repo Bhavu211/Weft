@@ -18,7 +18,7 @@ Full context:
 | M2 — Reconstruction spike (segment + classify) | ✅ done |
 | M3 — Privacy preview | ✅ done |
 | M4 — Multi-session merge | ✅ done |
-| M5 — Map + analysis + register | ⬜ not started |
+| M5 — Map + analysis + register | ✅ done |
 | M6 — Brief + ticket export | ⬜ not started |
 | M7 — ROI tracker | ⬜ not started |
 | M8 — Consent + metrics + polish | ⬜ not started |
