@@ -2,7 +2,40 @@ import type { CapturedEvent } from "../types";
 import type { CaptureEventMessage } from "../background/messages";
 import { redactText } from "./redact";
 
-const INTERACTIVE_SELECTOR = "a, button, [role], input, select, textarea";
+// Only genuine widget/control roles — never structural or data-bearing ones
+// (row, gridcell, cell, table, grid, list, region, article, ...). A bare
+// "[role]" selector would treat a data-grid row or cell as "the interactive
+// element" for a click that lands inside it, and the textContent fallback
+// in getLabel() below would then capture that cell's actual value — exactly
+// the "page-content text from data regions" capture is never supposed to
+// touch (weft-prd.md FR-3). Scoping to roles that represent a specific
+// action a person takes, not a container of data, closes that hole.
+const INTERACTIVE_ROLES = [
+  "button",
+  "link",
+  "checkbox",
+  "radio",
+  "switch",
+  "menuitem",
+  "menuitemcheckbox",
+  "menuitemradio",
+  "tab",
+  "option",
+  "combobox",
+  "textbox",
+  "searchbox",
+  "slider",
+  "spinbutton",
+];
+
+const INTERACTIVE_SELECTOR = [
+  "a",
+  "button",
+  "input",
+  "select",
+  "textarea",
+  ...INTERACTIVE_ROLES.map((role) => `[role="${role}"]`),
+].join(", ");
 
 function getRole(el: Element): string {
   const explicit = el.getAttribute("role");
@@ -77,8 +110,14 @@ function asElement(target: EventTarget | null): Element | null {
 document.addEventListener(
   "click",
   (e) => {
+    // If the click didn't land on (or inside) a genuine interactive
+    // control, don't fall back to the raw click target — that target could
+    // be a data-grid cell, a table row, or any other element whose
+    // textContent is exactly the page-content this is never supposed to
+    // read. No interactive ancestor means no label, not "use whatever was
+    // clicked."
     const el = asElement(e.target);
-    send(buildEvent("click", el?.closest(INTERACTIVE_SELECTOR) ?? el));
+    send(buildEvent("click", el?.closest(INTERACTIVE_SELECTOR) ?? null));
   },
   { capture: true }
 );

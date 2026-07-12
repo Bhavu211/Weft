@@ -33,4 +33,29 @@ describe("redactText", () => {
       "email [REDACTED] or call [REDACTED]"
     );
   });
+
+  it("redacts shorter account/ticket/ID-like numbers, not just full card numbers", () => {
+    expect(redactText("Ticket 482910 opened")).toBe("Ticket [REDACTED] opened");
+    expect(redactText("Case #113355 closed")).toBe("Case #[REDACTED] closed");
+  });
+
+  it("redacts currency-formatted amounts (comma/period separators)", () => {
+    expect(redactText("Balance $45,231.00 due")).toBe("Balance $[REDACTED] due");
+  });
+
+  it("redacts phone numbers formatted with parentheses and a hyphen", () => {
+    // the leading "(" isn't part of the match (the run must start at a
+    // digit), same as "$" or "#" staying put in the currency/ticket cases
+    // above — only the digits themselves are redacted.
+    expect(redactText("Call (555) 123-4567 now")).toBe("Call ([REDACTED] now");
+  });
+
+  it("redacts slash-formatted dates (can encode a date of birth)", () => {
+    expect(redactText("DOB 12/31/1990 on file")).toBe("DOB [REDACTED] on file");
+  });
+
+  it("still leaves genuinely short numbers alone", () => {
+    expect(redactText("Row 3 of 12")).toBe("Row 3 of 12");
+    expect(redactText("Step 12 of 34")).toBe("Step 12 of 34");
+  });
 });

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Weft security-fix test — data grid vs. real controls</title>
+</head>
+<body>
+  <!-- Mimics a typical enterprise data-grid: rows/cells carry role="row"/"gridcell"
+       but are NOT a control a person "activates" — clicking one just selects/views
+       data. Weft must never treat these as the step's label source. -->
+  <div role="grid" aria-label="Customer accounts">
+    <div role="row" id="row-1">
+      <div role="gridcell" id="cell-name">Jane Smith</div>
+      <div role="gridcell" id="cell-balance">$45,231.00</div>
+      <div role="gridcell" id="cell-account">Account 113355790</div>
+    </div>
+  </div>
+
+  <!-- A genuine custom-role control, which SHOULD still be captured normally. -->
+  <div role="button" id="real-button">Approve Transfer</div>
+</body>
+</html>
