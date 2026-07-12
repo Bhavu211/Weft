@@ -19,7 +19,7 @@ Full context:
 | M3 — Privacy preview | ✅ done |
 | M4 — Multi-session merge | ✅ done |
 | M5 — Map + analysis + register | ✅ done |
-| M6 — Brief + ticket export | ⬜ not started |
+| M6 — Brief + ticket export | ✅ done |
 | M7 — ROI tracker | ⬜ not started |
 | M8 — Consent + metrics + polish | ⬜ not started |
 
