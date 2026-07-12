@@ -1,7 +1,15 @@
 import type { Session } from "../types";
-import { appendEvent, getSession, saveSession, getActiveSessionId, setActiveSessionId } from "../lib/storage";
+import {
+  appendEvent,
+  deleteSession,
+  getSession,
+  saveSession,
+  getActiveSessionId,
+  setActiveSessionId,
+} from "../lib/storage";
 import { segment } from "../reconstruct/segment";
 import { classify } from "../reconstruct/classify";
+import { applyLabelEdits } from "../lib/privacy-preview";
 import type { WeftMessage } from "./messages";
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -32,6 +40,10 @@ async function handleMessage(message: WeftMessage) {
       return captureEvent(message);
     case "GET_CAPTURE_STATE":
       return { activeSessionId: await getActiveSessionId() };
+    case "CONFIRM_SESSION":
+      return confirmSession(message.sessionId, message.labelEdits);
+    case "DISCARD_SESSION":
+      return discardSession(message.sessionId);
   }
 }
 
@@ -41,6 +53,7 @@ async function startCapture(workflowId: string) {
     workflowId,
     startedAt: Date.now(),
     events: [],
+    reviewed: false,
   };
   await saveSession(session);
   await setActiveSessionId(session.id);
@@ -84,4 +97,26 @@ async function captureEvent(message: Extract<WeftMessage, { type: "CAPTURE_EVENT
 
   const captured = await appendEvent(sessionId, message.event);
   return { captured };
+}
+
+// Finalizes a stopped session once the user has confirmed the privacy
+// preview: applies any labels they redacted/rewrote and marks it reviewed.
+// Nothing before this point counts as the workflow's confirmed record.
+async function confirmSession(sessionId: string, labelEdits: Record<string, string>) {
+  const session = await getSession(sessionId);
+  if (!session) return { confirmed: false };
+
+  if (session.steps) {
+    session.steps = applyLabelEdits(session.steps, labelEdits);
+  }
+  session.reviewed = true;
+  await saveSession(session);
+  return { confirmed: true };
+}
+
+// The user rejected the privacy preview: remove the session entirely rather
+// than soft-deleting it, so nothing from it lingers in storage.
+async function discardSession(sessionId: string) {
+  await deleteSession(sessionId);
+  return { discarded: true };
 }

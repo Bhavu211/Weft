@@ -35,3 +35,9 @@ export async function appendEvent(sessionId: string, event: CapturedEvent): Prom
   await saveSession(session);
   return true;
 }
+
+export async function deleteSession(sessionId: string): Promise<void> {
+  const sessions = await getSessions();
+  delete sessions[sessionId];
+  await chrome.storage.local.set({ [SESSIONS_KEY]: sessions });
+}

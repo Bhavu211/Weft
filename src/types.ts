@@ -25,6 +25,7 @@ export interface Session {
   endedAt?: number;
   events: CapturedEvent[];
   steps?: ClassifiedStep[]; // computed by segment.ts + classify.ts when capture stops
+  reviewed?: boolean; // true once the user has confirmed the privacy preview
 }
 
 // Output of segment.ts: one session's raw events grouped into logical steps.
