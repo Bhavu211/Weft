@@ -75,3 +75,30 @@ body {
   margin-top: 8px;
   line-height: 1.4;
 }
+
+.wf-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.wf-tab {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.wf-tab-active {
+  color: var(--ink);
+  border-color: var(--signal);
+}
+
+.wf-stats-grid {
+  margin-bottom: 16px;
+}
