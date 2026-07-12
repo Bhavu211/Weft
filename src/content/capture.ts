@@ -68,11 +68,17 @@ function send(event: CapturedEvent): void {
   });
 }
 
+// Event targets are virtually always Elements, but a defensive check avoids
+// a crash if some target ever turns out to be a Document/Text/other node.
+function asElement(target: EventTarget | null): Element | null {
+  return target instanceof Element ? target : null;
+}
+
 document.addEventListener(
   "click",
   (e) => {
-    const target = (e.target as Element)?.closest(INTERACTIVE_SELECTOR);
-    send(buildEvent("click", target ?? (e.target as Element)));
+    const el = asElement(e.target);
+    send(buildEvent("click", el?.closest(INTERACTIVE_SELECTOR) ?? el));
   },
   { capture: true }
 );
@@ -80,7 +86,7 @@ document.addEventListener(
 document.addEventListener(
   "input",
   (e) => {
-    send(buildEvent("input", e.target as Element));
+    send(buildEvent("input", asElement(e.target)));
   },
   { capture: true }
 );
@@ -88,10 +94,46 @@ document.addEventListener(
 document.addEventListener(
   "submit",
   (e) => {
-    send(buildEvent("submit", e.target as Element));
+    send(buildEvent("submit", asElement(e.target)));
   },
   { capture: true }
 );
+
+// SPA route changes (pushState/replaceState/back-forward) don't reload the
+// page, so a screen the user never directly interacts with — e.g. an
+// auto-advancing verification-result screen — would otherwise never produce
+// a captured event carrying its own urlPath, and segment.ts would never see
+// that boundary. Emit a synthetic navigation event whenever the path changes.
+let lastUrlPath = window.location.pathname;
+
+function notifyIfPathChanged(): void {
+  if (window.location.pathname !== lastUrlPath) {
+    lastUrlPath = window.location.pathname;
+    send(buildEvent("navigation", null));
+  }
+}
+
+// Some pages freeze or otherwise lock down `history` (frameworks that guard
+// against exactly this kind of patching); reassigning pushState/replaceState
+// there throws and would abort this entire content script before any
+// listeners attach. Never let that take down capture.
+try {
+  const originalPushState = history.pushState.bind(history);
+  history.pushState = function (...args: Parameters<History["pushState"]>) {
+    originalPushState(...args);
+    notifyIfPathChanged();
+  };
+
+  const originalReplaceState = history.replaceState.bind(history);
+  history.replaceState = function (...args: Parameters<History["replaceState"]>) {
+    originalReplaceState(...args);
+    notifyIfPathChanged();
+  };
+} catch (err) {
+  console.error("[Weft] could not patch history for SPA navigation detection", err);
+}
+
+window.addEventListener("popstate", notifyIfPathChanged);
 
 send(buildEvent("navigation", null));
 

@@ -9,7 +9,7 @@ import type {
 // unnamed workflow bucket.
 const DEFAULT_WORKFLOW_ID = "unnamed-workflow";
 
-export default function CaptureControls() {
+export default function CaptureControls({ onStopped }: { onStopped?: (sessionId: string) => void }) {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,7 +28,10 @@ export default function CaptureControls() {
 
   async function stop() {
     const res: StopCaptureResponse = await chrome.runtime.sendMessage({ type: "STOP_CAPTURE" });
-    if (res.stopped) setActiveSessionId(null);
+    if (res.stopped) {
+      setActiveSessionId(null);
+      if (res.sessionId) onStopped?.(res.sessionId);
+    }
   }
 
   return (

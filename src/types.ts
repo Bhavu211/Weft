@@ -24,6 +24,27 @@ export interface Session {
   startedAt: number;
   endedAt?: number;
   events: CapturedEvent[];
+  steps?: ClassifiedStep[]; // computed by segment.ts + classify.ts when capture stops
+}
+
+// Output of segment.ts: one session's raw events grouped into logical steps.
+// A step is a run of consecutive events on the same domain/path; a new step
+// starts on path change, form submit, domain change, or an idle gap > 8s.
+export interface Step {
+  id: string;
+  order: number;
+  ts: number;
+  durationMs: number; // time until the next step begins (or session end, for the last step)
+  domain: string;
+  urlPath: string;
+  label: string; // representative label for the step's defining action
+  events: CapturedEvent[]; // the raw events grouped into this step
+  isCrossSystem: boolean; // true if this step opened right after a domain change
+}
+
+// Output of classify.ts: a Step with its assigned signature.
+export interface ClassifiedStep extends Step {
+  signature: StepSignature;
 }
 
 export interface MergedNode {
