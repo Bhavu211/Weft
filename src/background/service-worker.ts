@@ -19,6 +19,13 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log("[Weft] service worker installed");
 });
 
+// Without this, the toolbar icon (declared via manifest's `action`) does
+// nothing when clicked — the side panel API needs to be told explicitly to
+// open on an action click instead of requiring the generic side-panel picker.
+chrome.sidePanel
+  .setPanelBehavior({ openPanelOnActionClick: true })
+  .catch((err) => console.error("[Weft] failed to set side panel behavior", err));
+
 // chrome.runtime.onMessage fires once per incoming message; without
 // serializing them, two CAPTURE_EVENT messages arriving close together (very
 // common — clicks and inputs fire in quick succession) can both read the
