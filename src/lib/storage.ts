@@ -41,3 +41,10 @@ export async function deleteSession(sessionId: string): Promise<void> {
   delete sessions[sessionId];
   await chrome.storage.local.set({ [SESSIONS_KEY]: sessions });
 }
+
+// Only reviewed sessions (confirmed past the privacy preview) are eligible
+// for merge — an unreviewed session hasn't been checked for redactions yet.
+export async function getReviewedSessionsForWorkflow(workflowId: string): Promise<Session[]> {
+  const sessions = await getSessions();
+  return Object.values(sessions).filter((session) => session.workflowId === workflowId && session.reviewed);
+}

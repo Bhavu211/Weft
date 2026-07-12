@@ -5,12 +5,15 @@ import type {
   StopCaptureResponse,
 } from "../../background/messages";
 
-// Placeholder until M4 adds workflow naming; every M1 session belongs to one
-// unnamed workflow bucket.
-const DEFAULT_WORKFLOW_ID = "unnamed-workflow";
-
-export default function CaptureControls({ onStopped }: { onStopped?: (sessionId: string) => void }) {
+export default function CaptureControls({
+  workflowId,
+  onStopped,
+}: {
+  workflowId: string;
+  onStopped?: (sessionId: string) => void;
+}) {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const trimmedWorkflowId = workflowId.trim();
 
   useEffect(() => {
     chrome.runtime
@@ -19,9 +22,10 @@ export default function CaptureControls({ onStopped }: { onStopped?: (sessionId:
   }, []);
 
   async function start() {
+    if (!trimmedWorkflowId) return;
     const res: StartCaptureResponse = await chrome.runtime.sendMessage({
       type: "START_CAPTURE",
-      workflowId: DEFAULT_WORKFLOW_ID,
+      workflowId: trimmedWorkflowId,
     });
     setActiveSessionId(res.sessionId);
   }
@@ -41,12 +45,12 @@ export default function CaptureControls({ onStopped }: { onStopped?: (sessionId:
           Stop recording
         </button>
       ) : (
-        <button className="btn btn-start" onClick={start}>
+        <button className="btn btn-start" onClick={start} disabled={!trimmedWorkflowId}>
           Start recording
         </button>
       )}
       <span className="muted capture-status">
-        {activeSessionId ? "Recording…" : "Not recording"}
+        {activeSessionId ? "Recording…" : trimmedWorkflowId ? "Not recording" : "Name a workflow to start"}
       </span>
     </div>
   );

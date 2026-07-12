@@ -77,6 +77,21 @@ export interface Edge {
   totalSessions: number;
 }
 
+// Which raw (session, step) pairs merge.ts folded into each MergedNode —
+// exposed so a future "merge review" UI can show "these steps were treated
+// as the same" and let the user split a bad match apart.
+export interface MergeAlignment {
+  nodeId: string;
+  contributors: { sessionId: string; stepId: string }[];
+}
+
+export interface MergeResult {
+  nodes: MergedNode[];
+  edges: Edge[];
+  alignments: MergeAlignment[];
+  totalSessions: number;
+}
+
 export interface AutomationBrief {
   problem: string;
   trigger: string;

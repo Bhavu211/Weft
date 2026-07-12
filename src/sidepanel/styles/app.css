@@ -155,3 +155,61 @@ body {
   background: var(--ok);
   color: var(--canvas);
 }
+
+.workflow-name-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.workflow-name-input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 10px;
+}
+
+.merge-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--hair);
+}
+
+.btn-merge {
+  background: var(--flow);
+  color: var(--canvas);
+}
+
+.merged-node-main {
+  border-left: 3px solid var(--flow);
+}
+
+.merged-node-variant {
+  border-left: 3px solid var(--muted);
+}
+
+.merged-node-exception {
+  border-left: 3px solid var(--warn);
+}
+
+.merge-alignment {
+  margin-top: 4px;
+}
+
+.merge-alignment summary {
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.merge-alignment-list {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  font-size: 11px;
+}

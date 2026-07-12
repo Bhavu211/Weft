@@ -2,12 +2,16 @@ import { useState } from "react";
 import CaptureControls from "./components/CaptureControls";
 import StepList from "./components/StepList";
 import PrivacyPreview from "./components/PrivacyPreview";
-import { getSession } from "../lib/storage";
-import type { ClassifiedStep } from "../types";
+import MergedList from "./components/MergedList";
+import { getReviewedSessionsForWorkflow, getSession } from "../lib/storage";
+import { merge } from "../reconstruct/merge";
+import type { ClassifiedStep, MergeResult } from "../types";
 import type { ConfirmSessionResponse, DiscardSessionResponse } from "../background/messages";
 
 export default function App() {
+  const [workflowName, setWorkflowName] = useState("");
   const [steps, setSteps] = useState<ClassifiedStep[]>([]);
+  const [mergeResult, setMergeResult] = useState<MergeResult | null>(null);
 
   // A stopped session sits here, unreviewed, until the user confirms or
   // discards it in the privacy preview — nothing here counts as saved yet.
@@ -51,13 +55,30 @@ export default function App() {
     clearPending();
   }
 
+  async function handleMerge() {
+    const workflowId = workflowName.trim();
+    if (!workflowId) return;
+    const sessions = await getReviewedSessionsForWorkflow(workflowId);
+    setMergeResult(merge(sessions));
+  }
+
   const reconstructionFailed =
     pendingEventCount !== null && pendingEventCount > 0 && pendingSteps.length === 0;
 
   return (
     <div className="app">
       <h1>Weft</h1>
-      <CaptureControls onStopped={handleStopped} />
+      <label className="workflow-name-label" htmlFor="workflow-name">
+        Workflow
+      </label>
+      <input
+        id="workflow-name"
+        className="workflow-name-input"
+        placeholder="e.g. partner onboarding"
+        value={workflowName}
+        onChange={(e) => setWorkflowName(e.target.value)}
+      />
+      <CaptureControls workflowId={workflowName} onStopped={handleStopped} />
       {pendingSessionId ? (
         reconstructionFailed ? (
           <div>
@@ -75,6 +96,12 @@ export default function App() {
       ) : (
         <StepList steps={steps} />
       )}
+      <div className="merge-section">
+        <button type="button" className="btn btn-merge" onClick={handleMerge} disabled={!workflowName.trim()}>
+          Merge recorded sessions
+        </button>
+        {mergeResult ? <MergedList result={mergeResult} /> : null}
+      </div>
     </div>
   );
 }
