@@ -390,3 +390,43 @@ body {
   padding: 3px 8px;
   font-size: 11px;
 }
+
+.brief-view {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: 8px;
+}
+
+.brief-view h3 {
+  font-family: var(--font-display);
+  font-size: 14px;
+  margin: 2px 0 8px;
+}
+
+.brief-fields {
+  margin: 0;
+}
+
+.brief-fields div {
+  margin-top: 10px;
+}
+
+.brief-fields dd {
+  margin: 0;
+  font-size: 13px;
+}
+
+.brief-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.btn-export {
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--hair);
+}

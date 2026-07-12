@@ -103,11 +103,23 @@ export interface AutomationBrief {
   estimatedSavingHrs: number;
 }
 
+// A frozen snapshot of the analyzed step at the moment it was added to the
+// register — deliberately self-contained rather than a pointer back into a
+// live merge result, since re-merging (a new session recorded, node ids
+// shifting) shouldn't invalidate something the user already chose to pursue.
 export interface Opportunity {
   stepId: string;
   label: string;
+  system: string;
+  signature: StepSignature;
+  isCrossSystem: boolean;
   intervention: string;
+  suggestionText: string;
+  effort: 1 | 2 | 3;
   impact: 1 | 2 | 3;
+  occurrence: number;
+  totalSessions: number;
+  avgDurationMs: number;
   brief?: AutomationBrief; // generated in M6; a freshly-added opportunity has none yet
   status: "identified" | "specced" | "shipped";
   estimatedSavingHrs: number;

@@ -6,8 +6,10 @@ import WorkflowMap from "./components/WorkflowMap";
 import AnalysisPanel from "./components/AnalysisPanel";
 import Register from "./components/Register";
 import MergedList from "./components/MergedList";
+import BriefView from "./components/BriefView";
 import { getReviewedSessionsForWorkflow, getRegister, getSession, saveRegister } from "../lib/storage";
 import { merge } from "../reconstruct/merge";
+import { generateBrief } from "../brief/generate-brief";
 import type { ClassifiedStep, MergeResult, MergedNode, Opportunity } from "../types";
 import type { ConfirmSessionResponse, DiscardSessionResponse } from "../background/messages";
 
@@ -78,8 +80,16 @@ export default function App() {
     const opportunity: Opportunity = {
       stepId: node.id,
       label: node.label,
+      system: node.system,
+      signature: node.signature,
+      isCrossSystem: node.isCrossSystem,
       intervention: node.intervention,
+      suggestionText: node.suggestionText,
+      effort: node.effort,
       impact: node.impact,
+      occurrence: node.occurrence,
+      totalSessions: node.totalSessions,
+      avgDurationMs: node.avgDurationMs,
       status: "identified",
       estimatedSavingHrs: node.estimatedSavingHrsPerMonth,
     };
@@ -96,11 +106,22 @@ export default function App() {
     await saveRegister(workflowId, next);
   }
 
+  async function handleGenerateBrief(stepId: string) {
+    const workflowId = workflowName.trim();
+    if (!workflowId) return;
+    const next = register.map((o) => {
+      if (o.stepId !== stepId) return o;
+      return { ...o, brief: generateBrief(o), status: o.status === "identified" ? ("specced" as const) : o.status };
+    });
+    setRegister(next);
+    await saveRegister(workflowId, next);
+  }
+
   const reconstructionFailed =
     pendingEventCount !== null && pendingEventCount > 0 && pendingSteps.length === 0;
 
   const selectedNode = mergeResult?.nodes.find((n) => n.id === selectedNodeId) ?? null;
-  const selectedInRegister = selectedNode ? register.some((o) => o.stepId === selectedNode.id) : false;
+  const selectedOpportunity = selectedNode ? register.find((o) => o.stepId === selectedNode.id) ?? null : null;
 
   return (
     <div className="app">
@@ -143,13 +164,20 @@ export default function App() {
             {selectedNode ? (
               <AnalysisPanel
                 node={selectedNode}
-                inRegister={selectedInRegister}
+                inRegister={Boolean(selectedOpportunity)}
                 onAdd={() => handleAddToRegister(selectedNode)}
                 onDismiss={() => handleRemoveFromRegister(selectedNode.id)}
               />
             ) : (
               <p className="muted">Click a step in the map to analyze it.</p>
             )}
+            {selectedOpportunity ? (
+              <BriefView
+                opportunity={selectedOpportunity}
+                brief={selectedOpportunity.brief ?? null}
+                onGenerate={() => handleGenerateBrief(selectedOpportunity.stepId)}
+              />
+            ) : null}
             <Register opportunities={register} onRemove={handleRemoveFromRegister} />
             <details className="merge-review">
               <summary className="muted">Merge review (which steps were treated as the same)</summary>
