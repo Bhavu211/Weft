@@ -17,7 +17,7 @@ Full context:
 | M1 — Capture + masking + PII redaction | ✅ done |
 | M2 — Reconstruction spike (segment + classify) | ✅ done |
 | M3 — Privacy preview | ✅ done |
-| M4 — Multi-session merge | ⬜ not started |
+| M4 — Multi-session merge | ✅ done |
 | M5 — Map + analysis + register | ⬜ not started |
 | M6 — Brief + ticket export | ⬜ not started |
 | M7 — ROI tracker | ⬜ not started |
