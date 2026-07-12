@@ -121,7 +121,11 @@ export interface Opportunity {
   totalSessions: number;
   avgDurationMs: number;
   brief?: AutomationBrief; // generated in M6; a freshly-added opportunity has none yet
-  status: "identified" | "specced" | "shipped";
+  // "reviewed"/"approved"/"sent_to_engineering" are additive stages for the
+  // dashboard's Automation Pipeline (a business-side kanban ahead of actual
+  // engineering handoff) — inserted between "identified" and "specced"/
+  // "shipped" without changing what those two original values mean.
+  status: "identified" | "reviewed" | "approved" | "specced" | "sent_to_engineering" | "shipped";
   estimatedSavingHrs: number;
   realizedSavingHrs?: number;
 }

@@ -161,9 +161,10 @@ export default function App() {
   async function handleGenerateBrief(stepId: string) {
     const workflowId = workflowName.trim();
     if (!workflowId) return;
+    const preSpecStatuses: Opportunity["status"][] = ["identified", "reviewed", "approved"];
     const next = register.map((o) => {
       if (o.stepId !== stepId) return o;
-      return { ...o, brief: generateBrief(o), status: o.status === "identified" ? ("specced" as const) : o.status };
+      return { ...o, brief: generateBrief(o), status: preSpecStatuses.includes(o.status) ? ("specced" as const) : o.status };
     });
     setRegister(next);
     await saveRegister(workflowId, next);
