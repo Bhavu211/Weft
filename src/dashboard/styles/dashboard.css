@@ -102,3 +102,74 @@ body {
 .wf-stats-grid {
   margin-bottom: 16px;
 }
+
+.register-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--hair);
+  border-radius: 10px;
+}
+
+.register-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.register-table th,
+.register-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--hair);
+  text-align: left;
+}
+
+.register-table th {
+  font-family: var(--font-mono);
+  color: var(--muted);
+  font-weight: 500;
+  background: var(--surface);
+}
+
+.register-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.register-table td {
+  color: var(--ink);
+}
+
+.register-name {
+  font-weight: 600;
+}
+
+.register-description {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: normal;
+  max-width: 260px;
+  margin-top: 2px;
+}
+
+.level-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  border: 1px solid transparent;
+}
+
+.level-low {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+.level-medium {
+  color: var(--warn);
+  border-color: var(--warn);
+}
+
+.level-high {
+  color: var(--signal);
+  border-color: var(--signal);
+}
