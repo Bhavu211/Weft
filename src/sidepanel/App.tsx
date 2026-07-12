@@ -16,6 +16,7 @@ import {
   saveRegister,
   getConsentAcknowledged,
   setConsentAcknowledged,
+  getFeedback,
 } from "../lib/storage";
 import {
   getMetricCounters,
@@ -52,7 +53,8 @@ export default function App() {
   }, []);
 
   async function refreshMetrics() {
-    setMetricRates(computeMetricRates(await getMetricCounters()));
+    const [counters, feedback] = await Promise.all([getMetricCounters(), getFeedback()]);
+    setMetricRates(computeMetricRates(counters, feedback));
   }
 
   async function handleAcknowledgeConsent() {
@@ -239,6 +241,7 @@ export default function App() {
                 inRegister={Boolean(selectedOpportunity)}
                 onAdd={() => handleAddToRegister(selectedNode)}
                 onDismiss={() => handleRemoveFromRegister(selectedNode.id)}
+                onVote={refreshMetrics}
               />
             ) : (
               <p className="muted">Click a step in the map to analyze it.</p>
@@ -270,6 +273,9 @@ export default function App() {
             </li>
             <li className="muted">
               Loop-closure rate: {metricRates.loopClosurePct === null ? "not enough data yet" : `${metricRates.loopClosurePct.toFixed(0)}%`}
+            </li>
+            <li className="muted">
+              Discovery quality (thumbs-up rate): {metricRates.thumbsUpRatePct === null ? "not enough data yet" : `${metricRates.thumbsUpRatePct.toFixed(0)}%`}
             </li>
           </ul>
         </details>

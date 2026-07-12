@@ -1,3 +1,5 @@
+import type { Thumb } from "../types";
+
 const METRICS_KEY = "weft_metrics";
 
 export interface MetricCounters {
@@ -48,13 +50,17 @@ export interface MetricRates {
   activationReached: boolean;
   acceptRatePct: number | null; // null, not 0, when there's no denominator yet
   loopClosurePct: number | null;
+  thumbsUpRatePct: number | null;
 }
 
-// Pure — derives the PRD's rates from raw counters (weft-prd.md §11:
-// activation, discovery/accept-rate, and loop-closure — "the health metric,
-// where prior tools died"). Returns null instead of a misleading 0% when the
-// denominator is still zero.
-export function computeMetricRates(counters: MetricCounters): MetricRates {
+// Pure — derives the PRD's rates from raw counters and the feedback map
+// (weft-prd.md §11: activation, discovery quality/thumbs-up rate,
+// accept-rate, and loop-closure — "the health metric, where prior tools
+// died"). Returns null instead of a misleading 0% when the denominator is
+// still zero.
+export function computeMetricRates(counters: MetricCounters, feedback: Record<string, Thumb>): MetricRates {
+  const votes = Object.values(feedback);
+
   return {
     activationReached: counters.reachedFirstMergedMap,
     acceptRatePct:
@@ -65,5 +71,6 @@ export function computeMetricRates(counters: MetricCounters): MetricRates {
       counters.opportunitiesAccepted > 0
         ? (counters.opportunitiesShipped / counters.opportunitiesAccepted) * 100
         : null,
+    thumbsUpRatePct: votes.length > 0 ? (votes.filter((v) => v === "up").length / votes.length) * 100 : null,
   };
 }

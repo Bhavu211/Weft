@@ -17,11 +17,13 @@ export default function AnalysisPanel({
   inRegister,
   onAdd,
   onDismiss,
+  onVote,
 }: {
   node: MergedNode;
   inRegister: boolean;
   onAdd: () => void;
   onDismiss: () => void;
+  onVote?: () => void;
 }) {
   const [thumb, setThumb] = useState<Thumb | null>(null);
 
@@ -38,6 +40,7 @@ export default function AnalysisPanel({
   async function vote(value: Thumb) {
     setThumb(value);
     await setFeedback(node.id, value);
+    onVote?.();
   }
 
   return (
