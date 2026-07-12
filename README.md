@@ -4,8 +4,9 @@ Observer-based workflow discovery → merged map → AI/automation suggestions �
 
 Full context:
 - [`weft-concept.md`](weft-concept.md) — the why
-- [`weft-prd.md`](weft-prd.md) — the product spec (v2.0)
-- [`BUILD.md`](BUILD.md) — the milestone-by-milestone build plan
+- [`weft-prd.md`](weft-prd.md) — the product spec (v2.0, updated with as-built notes)
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — the system as built: components, data flow, algorithms, security model, testing strategy
+- [`BUILD.md`](BUILD.md) — the milestone-by-milestone build plan (all done) + the post-MVP hardening pass
 - [`CLAUDE.md`](CLAUDE.md) — hard rules for anyone (human or agent) writing code here
 - [`reference/weft-mockup.html`](reference/weft-mockup.html) — UI reference for the map/analysis-panel/register visuals
 

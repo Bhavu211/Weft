@@ -4,6 +4,8 @@ Paste into Claude Code as the project brief (or save as `BUILD.md` and point Cla
 
 > v2 adds: page-content masking + privacy preview, multi-session merge, automation-brief + ticket export, and an ROI tracker. Read `weft-prd.md` (v2.0) and `weft-concept.md` (v0.2) for full context.
 
+> **Status: all 8 milestones built and gate-verified, plus a post-MVP hardening pass (§ "Post-MVP hardening" below).** This document is kept as the historical build plan — the milestone descriptions below are what was *asked for*; see `ARCHITECTURE.md` for what actually exists now, where the two differ.
+
 ---
 
 ## Project
@@ -29,6 +31,8 @@ Build **Weft**, a Chrome (MV3) extension that records people doing real work, **
 - Styling: plain CSS with the tokens below
 
 ## File structure
+
+As originally planned (still an accurate map of intent). See `ARCHITECTURE.md` §2 for the full as-built file list, including what the plan didn't anticipate (`reconstruct/roi.ts`, `lib/map-layout.ts`, `lib/privacy-preview.ts`, `icons/`, `.github/workflows/ci.yml`, and the extra manifest fields for icons/action).
 
 ```
 weft/
@@ -142,7 +146,7 @@ Suggestions are deterministic template strings (see the mockup for tone). No LLM
 
 ## Merge (`reconstruct/merge.ts`)
 
-Given multiple `Session[]` for one workflow: segment+classify each, normalize each step to a key `system|normalizedLabel|roughOrder`, collapse matching keys into one `MergedNode` (sum occurrence, average duration), and make divergent keys into branches. Emit `Edge`s with `occurrence/totalSessions`. Steps present in a minority of sessions → `isException = true`, `signature = exception_branch`. Provide the alignment decisions so the UI can offer a "merge review" to fix bad matches. Pure function; unit-test against a hand-merged fixture.
+**As built, this evolved past the original "key = system|normalizedLabel|roughOrder" plan** — a literal position-based key breaks the moment one session inserts or skips a step, since every later step in that session shifts to a different index and stops matching sessions that didn't take the detour. The shipped version instead progressively aligns each session's steps into a shared reference timeline using an LCS-style match (by step identity, not position), pairing genuine divergences — single-step swaps, equal-length multi-step swaps, and ragged/unequal-length swaps — as sibling branches at the right position rather than bolting them onto the end. See `ARCHITECTURE.md` §7.3 for the full algorithm and its one remaining residual limitation. Steps present in a minority of sessions (with a real sibling to diverge from) → `isException = true`, `signature = exception_branch`. Alignment decisions are exposed (`MergeAlignment`) so the UI can offer a "merge review"; `MergedList.tsx` surfaces this read-only today. Pure function; unit-tested against hand-merged fixtures (`merge.test.ts`, `merge-alignment.test.ts`).
 
 ## Design tokens (`tokens.css`)
 
@@ -156,32 +160,44 @@ Reuse the mockup's node card, analysis panel, and register visuals. Exception no
 
 ## Build milestones (stop at each gate)
 
-**M0 — Scaffold.** Vite+crxjs+React+TS; MV3 manifest (side panel, content script, service worker, `storage`); panel renders; content script logs on a test page.
+**M0 — Scaffold.** ✅ done. Vite+crxjs+React+TS; MV3 manifest (side panel, content script, service worker, `storage`); panel renders; content script logs on a test page.
 *Gate:* loads unpacked; panel opens; content script injects.
 
-**M1 — Capture + masking + PII redaction.** Content script captures masked events; `redact.ts` strips PII from any retained text; service worker manages start/stop; events persist.
+**M1 — Capture + masking + PII redaction.** ✅ done. Content script captures masked events; `redact.ts` strips PII from any retained text; service worker manages start/stop; events persist.
 *Gate:* a recorded session stores events with **no values, no query strings, no page-content text**; PII redaction verified on a seeded test page.
 
-**M2 — Reconstruction spike (the hard part).** `segment.ts` + `classify.ts` as pure, unit-tested functions vs. a fixture stream; render steps as a plain list first.
+**M2 — Reconstruction spike (the hard part).** ✅ done. `segment.ts` + `classify.ts` as pure, unit-tested functions vs. a fixture stream; render steps as a plain list first.
 *Gate:* step list matches a hand-made ground-truth map, ordering correct, minor errors only. **Fail → stop.**
 
-**M3 — Privacy preview.** `PrivacyPreview` shown before save: lists step labels/systems/timings, confirms nothing sensitive stored, lets user redact a label or discard the session.
+**M3 — Privacy preview.** ✅ done. `PrivacyPreview` shown before save: lists step labels/systems/timings, confirms nothing sensitive stored, lets user redact a label or discard the session.
 *Gate:* user can review and redact/discard before anything persists.
 
-**M4 — Multi-session merge.** Name a workflow; record ≥2 sessions; `merge.ts` produces main-path-plus-branches with frequency; exceptions flagged; merge-review to fix bad alignments.
+**M4 — Multi-session merge.** ✅ done. Name a workflow; record ≥2 sessions; `merge.ts` produces main-path-plus-branches with frequency; exceptions flagged; merge-review to fix bad alignments.
 *Gate:* merging 3 captures matches a hand-merged fixture and surfaces a variant a single session missed.
 
-**M5 — Map + analysis + register.** React Flow merged graph (custom nodes with 4 states, edge frequency labels); `AnalysisPanel` (signature, intervention, effort/impact, estimated saving, suggestion, thumbs, add/dismiss); `Register` with estimated savings.
+**M5 — Map + analysis + register.** ✅ done. React Flow merged graph (custom nodes with 4 states, edge frequency labels); `AnalysisPanel` (signature, intervention, effort/impact, estimated saving, suggestion, thumbs, add/dismiss); `Register` with estimated savings.
 *Gate:* click node → analysis; add opportunities → register updates with savings.
 
-**M6 — Brief + ticket export.** `generate-brief.ts` builds an `AutomationBrief` per register item; `BriefView` shows it; `export-ticket.ts` outputs JSON + Jira/Linear Markdown (title, description, checklist).
+**M6 — Brief + ticket export.** ✅ done. `generate-brief.ts` builds an `AutomationBrief` per register item; `BriefView` shows it; `export-ticket.ts` outputs JSON + Jira/Linear Markdown (title, description, checklist).
 *Gate:* an accepted opportunity → readable brief → valid JSON + paste-ready Markdown ticket.
 
-**M7 — ROI tracker.** Opportunity status identified→specced→shipped; on shipped, capture realized saving; `RoiPanel` aggregates shipped/hours/money/estimate-vs-actual.
+**M7 — ROI tracker.** ✅ done. Opportunity status identified→specced→shipped; on shipped, capture realized saving; `RoiPanel` aggregates shipped/hours/money/estimate-vs-actual.
 *Gate:* mark an item shipped with a realized saving → ROI view updates and shows estimate-vs-actual.
 
-**M8 — Consent + metrics + polish.** First-run `ConsentScreen` (blocks capture until acknowledged; states principles + masking); local metric counters (activation, accept-rate, loop-closure); empty states in-voice.
-*Gate:* full loop works on an unrehearsed workflow: consent → capture → merge → map → brief → ticket → shipped → ROI.
+**M8 — Consent + metrics + polish.** ✅ done. First-run `ConsentScreen` (blocks capture until acknowledged; states principles + masking); local metric counters (activation, accept-rate, loop-closure, **and thumbs-up rate — added during hardening, see below**); empty states in-voice.
+*Gate:* full loop works on an unrehearsed workflow: consent → capture → merge → map → brief → ticket → shipped → ROI. Verified on a completely fresh browser profile.
+
+## Post-MVP hardening
+
+Not part of the original milestone plan — found and fixed after all 8 milestones shipped, each verified live in Chromium by reproducing the bug against the pre-fix code first, then confirming the fix closes it. Full detail in `ARCHITECTURE.md`.
+
+1. **Data-grid capture leak (privacy).** `capture.ts`'s `INTERACTIVE_SELECTOR` used a bare `"[role]"`, matching structural/data ARIA roles (`row`, `gridcell`, …) as if they were controls — a click inside a data-grid cell captured that cell's actual content. Fixed by scoping to an explicit widget-role allowlist, and by changing the click handler's `?? el` fallback to `?? null` (the fallback alone had been silently undoing the scoping).
+2. **PII redaction gaps.** The digit-run pattern required 9+ digits and only a single space/hyphen separator — missed shorter account/ticket/OTP numbers and currency-formatted amounts (`$45,231.00`). Broadened to 6+ digits with a repeatable separator class (space/comma/period/hyphen/slash/parens).
+3. **Cross-tab bleed.** Recording wasn't scoped to a tab — any open tab's clicks fed the active session. Fixed with `chrome.tabs`-based scoping (§ ARCHITECTURE.md 7.5).
+4. **Service worker message-queue resilience.** One unhandled rejection in any message handler (e.g. a storage-quota-exceeded write) permanently broke all future message handling until Chrome restarted the worker. Fixed by always recovering the queue through a `.catch()`.
+5. **Merge alignment generalized twice more.** First to equal-length multi-step branch swaps, then to unequal-length ("ragged") branch swaps — see the updated Merge section above and `ARCHITECTURE.md` §7.3.
+6. **Missing "discovery quality" metric.** Thumbs feedback was captured (M5) but never aggregated into the PRD's thumbs-up-rate metric. Added to `lib/metrics.ts`.
+7. **Ops/polish:** extension icons + a toolbar `action` wired to `chrome.sidePanel.setPanelBehavior`, and a GitHub Actions CI workflow (`npm ci && npm test && npm run build` on push/PR).
 
 ## Non-goals for this build
 
@@ -189,4 +205,4 @@ No LLM calls, no backend, no accounts, no live Jira/Linear API, no cross-browser
 
 ## First thing to do
 
-Start with **M0 only**. Scaffold, get it loading unpacked in Chrome, confirm side panel + content script work, and report back before starting M1.
+~~Start with **M0 only**.~~ All milestones are built. For anyone picking this up next: read `ARCHITECTURE.md` first, then `weft-prd.md` §13 (open decisions) and §10 Phase 7 (design-partner beta + hardening — the actual next phase).

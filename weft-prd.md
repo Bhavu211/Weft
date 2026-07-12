@@ -6,6 +6,8 @@ Companion to `weft-concept.md` (v0.2, the why) and `weft-mockup.html` (UI refere
 
 > v2.0 changelog: adds multi-session merge, page-content masking + privacy preview, automation-brief + ticket export, an ROI tracker, and worker-consent principles. North Star flips from "opportunities exported" to "realized savings."
 
+> **Implementation status: all 8 MVP milestones (`BUILD.md`) are built and gate-verified**, plus a post-MVP hardening pass (privacy fixes, a service-worker resilience fix, merge-alignment improvements, CI/icons). This document remains the authoritative product spec; where an FR below has a note in *italics*, that's what changed or was clarified during the build. See `ARCHITECTURE.md` for full technical detail and `BUILD.md` for the build history.
+
 ---
 
 ## 1. Summary
@@ -55,11 +57,11 @@ These are enforced in the product, not just documented.
 
 ## 5. Functional requirements
 
-**FR-1 Capture control.** Side panel Start/Stop, a persistent recording indicator, and a visible "values and on-screen content are not captured" reassurance during recording. Capture is disabled until first-run consent is acknowledged.
+**FR-1 Capture control.** Side panel Start/Stop, a persistent recording indicator, and a visible "values and on-screen content are not captured" reassurance during recording. Capture is disabled until first-run consent is acknowledged (the consent screen gates the entire app, not just the Start button). *An active recording is also scoped to the tab it started in (plus any tab opened from it) — a tab the user just happens to have open elsewhere never contributes events, even though the content script runs everywhere. This wasn't in the original FR but follows directly from "worker-initiated": only the tab actually being worked in should count.*
 
-**FR-2 Event capture.** Per action: type (click/input/submit/navigation), element descriptor (role, accessible name or stable label, tag — never value), timestamp, URL path (query stripped), domain. Cross-domain transitions flagged.
+**FR-2 Event capture.** Per action: type (click/input/submit/navigation), element descriptor (role, accessible name or stable label, tag — never value), timestamp, URL path (query stripped), domain. Cross-domain transitions flagged. *Element identity is only read from genuine interactive controls (an explicit ARIA widget-role allowlist plus native interactive tags) — never from structural/data roles like table rows or grid cells, which would otherwise expose page-content values through the "label" field. See FR-3.*
 
-**FR-3 Masking (hard rule, extended).** Never store: input values, query strings, screenshots, **or page-content text from data regions**. Prefer roles/ARIA labels/stable selectors for step labels over visible text. Any retained text passes a PII-redaction pass (patterns for emails, PAN/GST, account/card-like numbers, obvious name fields). Enforced at capture time.
+**FR-3 Masking (hard rule, extended).** Never store: input values, query strings, screenshots, **or page-content text from data regions**. Prefer roles/ARIA labels/stable selectors for step labels over visible text. Any retained text passes a PII-redaction pass (patterns for emails, PAN/GST, account/card-like numbers, obvious name fields). Enforced at capture time. *The digit-run pattern catches 6+ digit runs (not just 9+), tolerating space/comma/period/hyphen/slash/parens separators — short account/ticket/OTP numbers and currency-formatted amounts are redacted, not just full card numbers. Name-field redaction remains a hard, generically-unsolvable problem for a regex pass; the primary mitigation is FR-2's role scoping, which stops most name leaks (e.g. a customer-name grid cell) at the source rather than relying on redaction to catch them after the fact.*
 
 **FR-4 Privacy preview.** Before a session is saved, show the user a plain-language summary of exactly what will be stored (step labels, systems, timings — and confirmation that no values/content were kept), with the option to redact any label or discard the session.
 
@@ -97,7 +99,7 @@ Choice → why → rejected alternative.
 
 **6.4 Capture — structured events, no values, no page content, no pixels.** Enough to reconstruct; trivial to mask; lightest build. Content masking + PII redaction added in v2 to close the on-screen-data hole. *Rejected:* screenshot/DOM-snapshot (heavy, privacy-fraught).
 
-**6.5 Reconstruction & merge — rules-based, client-side.** Segmentation by page/submit/idle/domain; **merge by step alignment** (match on system + normalized label + position). Testable against hand-made ground-truth and hand-merged maps. *Why:* cheap, debuggable, legible; a wrong-but-explainable map the user can fix beats an opaque one. *Rejected:* ML (no training data yet; premature).
+**6.5 Reconstruction & merge — rules-based, client-side.** Segmentation by page/submit/idle/domain; **merge by step alignment** (match on system + normalized label, position handled by a progressive LCS-style fold rather than baked into the key — see below). Testable against hand-made ground-truth and hand-merged maps. *Why:* cheap, debuggable, legible; a wrong-but-explainable map the user can fix beats an opaque one. *Rejected:* ML (no training data yet; premature). *As built: matching purely on "system + normalized label + literal position" (the original plan) broke the moment one session inserted or skipped a step, since every later step in that session shifted to a different position index. The shipped merge instead aligns by step identity independent of position, then resolves divergences (single-step swaps, equal-length multi-step swaps, and unequal-length/ragged swaps) as branches at the right point in the timeline. See `ARCHITECTURE.md` §7.3 — this substantially resolves open decision §13.3 below.*
 
 **6.6 Front-end — Vite + `@crxjs/vite-plugin` + React + TypeScript.** Stateful interactive UI; typed schemas cut bugs in reconstruction/merge; crxjs is the MV3+Vite+HMR standard. *Rejected:* vanilla (state gets messy); Webpack (slower DX); Plasmo (heavier than needed).
 
@@ -162,39 +164,43 @@ ROI { shippedCount, hoursSaved, moneySaved, estimateVsActualPct }
 
 ## 10. Phased delivery plan (gates — do not pass a failed gate)
 
-**Phase 0 — Foundations.** Scaffold Vite+crxjs+React+TS; MV3 manifest; side-panel shell; empty content script + service worker; typed data model; tokens.
+**Phases 0–6 are complete** (they map 1:1 onto `BUILD.md`'s M0–M8; see that file for exact gate-verification notes on each). Summary:
+
+**Phase 0 — Foundations.** ✅ Scaffold Vite+crxjs+React+TS; MV3 manifest; side-panel shell; empty content script + service worker; typed data model; tokens.
 *Gate:* loads unpacked; panel opens; content script injects.
 
-**Phase 1 — Reconstruction spike (riskiest, throwaway).** Capture a raw stream from one real session; rules-based segmenter → rough step list; test vs. a hand-made ground-truth map.
+**Phase 1 — Reconstruction spike (riskiest, throwaway).** ✅ Capture a raw stream from one real session; rules-based segmenter → rough step list; test vs. a hand-made ground-truth map.
 *Gate:* reproduces ground-truth steps/order, minor errors only. **Fail → stop and rethink.**
 
-**Phase 2 — Capture + masking + privacy preview.** Full masked capture (values + content + PII redaction); session store; privacy preview before save.
+**Phase 2 — Capture + masking + privacy preview.** ✅ Full masked capture (values + content + PII redaction); session store; privacy preview before save.
 *Gate:* a recorded session stores correctly-masked events; preview shows no values/content; user can redact/discard.
 
-**Phase 3 — Multi-session merge.** Name a workflow, record it ≥2×, merge into main-path-plus-branches with frequency; surface exception branches; merge-review to fix bad alignments.
+**Phase 3 — Multi-session merge.** ✅ Name a workflow, record it ≥2×, merge into main-path-plus-branches with frequency; surface exception branches; merge-review to fix bad alignments.
 *Gate:* merged map of 3 captures matches a hand-merged ground truth and surfaces a real variant a single session missed.
 
-**Phase 4 — Map + analysis + register.** React Flow merged graph (custom nodes, edge frequency); analysis panel (signature, intervention, effort/impact, estimated saving, suggestion, add/dismiss, thumbs); register with estimated savings.
+**Phase 4 — Map + analysis + register.** ✅ React Flow merged graph (custom nodes, edge frequency); analysis panel (signature, intervention, effort/impact, estimated saving, suggestion, add/dismiss, thumbs); register with estimated savings.
 *Gate:* click node → analysis; add opportunities → register updates.
 
-**Phase 5 — Brief + ticket export + ROI tracker.** Generate automation briefs; export JSON + Jira/Linear Markdown; opportunity status (identified→specced→shipped) with realized-saving entry; ROI view (shipped, hours, money, estimate-vs-actual).
+**Phase 5 — Brief + ticket export + ROI tracker.** ✅ Generate automation briefs; export JSON + Jira/Linear Markdown; opportunity status (identified→specced→shipped) with realized-saving entry; ROI view (shipped, hours, money, estimate-vs-actual).
 *Gate:* an accepted opportunity → brief → valid ticket export → marked shipped with a realized saving → ROI view updates.
 
-**Phase 6 — Consent, feedback, dogfood.** First-run consent; local metric counters; dogfood on messy real sessions; fix map/merge readability on real data.
-*Gate:* full loop works on an unrehearsed workflow, consent-to-ROI.
+**Phase 6 — Consent, feedback, dogfood.** ✅ First-run consent; local metric counters; dogfood on messy real sessions; fix map/merge readability on real data.
+*Gate:* full loop works on an unrehearsed workflow, consent-to-ROI. *Verified on a completely fresh browser profile — no rehearsal, no prior state.*
 
-**Phase 7 — Design-partner beta + harden.** Ship to 1–2 partners; weekly loop; precision over recall on suggestions; security review; then open v2 (live ticket API, LLM suggestions, more workflow types) from evidence.
+**Phase 7 — Design-partner beta + harden.** *Partially done.* Ship to 1–2 partners; weekly loop; precision over recall on suggestions; security review; then open v2 (live ticket API, LLM suggestions, more workflow types) from evidence.
+- ✅ **Security review** — done as an internal code/architecture audit (not a third-party pen test): found and fixed a real capture-time privacy leak (structural ARIA roles exposing data-grid content), redaction gaps, a cross-tab data-bleed bug, and a service-worker resilience bug where one failure could permanently break the extension. See `ARCHITECTURE.md` §8 and `BUILD.md`'s "Post-MVP hardening."
+- ⬜ **Ship to 1–2 design partners**, **weekly loop**, **precision-tune suggestions from real usage** — all genuinely need real users and real usage data; not something buildable in the abstract. This is the actual next phase.
 
 ## 11. Success metrics & instrumentation
 
-- **North Star:** realized savings per account per month.
-- **Loop-closure rate:** % of accepted opportunities reaching shipped + measured — the health metric; where prior tools died.
-- **Activation:** % of installs reaching a first (merged) map.
-- **Discovery quality:** thumbs-up rate on suggestions.
-- **Merge validity:** does merge surface variants single sessions missed?
-- **Estimate accuracy:** estimated vs. realized savings delta (keeps ROI honest).
+- **North Star:** realized savings per account per month. *Shown directly in `RoiPanel` (hours/money saved).*
+- **Loop-closure rate:** % of accepted opportunities reaching shipped + measured — the health metric; where prior tools died. *Instrumented (`lib/metrics.ts`); shown in the Metrics panel.*
+- **Activation:** % of installs reaching a first (merged) map. *Instrumented as a flag (single-install MVP, so "%" is really "did this install reach one").*
+- **Discovery quality:** thumbs-up rate on suggestions. *Instrumented — added during the post-MVP hardening pass; the raw per-node thumbs data existed since Phase 4 but wasn't aggregated into a rate until then.*
+- **Merge validity:** does merge surface variants single sessions missed? *Verified by test (`merge.test.ts`, `merge-alignment.test.ts`), not a runtime UI metric — this is a property to keep testing for, not something to display a number for.*
+- **Estimate accuracy:** estimated vs. realized savings delta (keeps ROI honest). *Instrumented as `estimateVsActualPct` in `RoiPanel`.*
 
-Instrument locally (counters in storage); no analytics backend until warranted.
+Instrument locally (counters in storage); no analytics backend until warranted. *Still true — everything above reads from `chrome.storage.local`, nothing is transmitted anywhere.*
 
 ## 12. Risks
 
@@ -206,8 +212,8 @@ Instrument locally (counters in storage); no analytics backend until warranted.
 
 ## 13. Open decisions needing sign-off
 
-1. Pilot workflow = partner onboarding (confirm).
-2. Idle-gap threshold ~8s (tune on real data).
-3. Merge key: system + normalized label + order — is label normalization robust enough, or add manual step-matching from day one?
-4. Savings inputs: who supplies the hourly-cost figure for money-saved (buyer config), and default hours assumptions.
-5. MVP palette (diagnostic instrument) now, portfolio rebrand post-beta — confirm.
+1. Pilot workflow = partner onboarding (confirm). *Still open — needs a real partner.*
+2. Idle-gap threshold ~8s (tune on real data). *Still open — hardcoded as `IDLE_GAP_MS` in `segment.ts`, not exposed in the UI; needs real session data to tune.*
+3. ~~Merge key: system + normalized label + order — is label normalization robust enough, or add manual step-matching from day one?~~ *Substantially resolved during the build: label normalization plus position-independent LCS-style alignment (not "order" baked into the key) correctly handles single-step swaps, equal-length multi-step swaps, and unequal-length/ragged swaps. The one residual gap is a multi-step gap where the alignment *within* the gap itself might not be the best possible pairing (still resolved positionally, front-to-back) — see `ARCHITECTURE.md` §7.3's "known residual limitation." Manual step-matching from the user is still not implemented; `MergeAlignment` data exists for it but there's no edit UI yet.*
+4. Savings inputs: who supplies the hourly-cost figure for money-saved (buyer config), and default hours assumptions. *Partially resolved: the hourly-cost figure is a user-editable field in `RoiPanel` (defaulting to a placeholder, `DEFAULT_HOURLY_COST` in `roi.ts`), and `runsPerMonth` is a similar surfaced assumption in `savings.ts`. Still open: what the *right* defaults are, and whether a buyer-level (vs. per-user) config makes more sense — needs real customer input.*
+5. MVP palette (diagnostic instrument) now, portfolio rebrand post-beta — confirm. *Still open — the shipped UI uses the MVP palette from `CLAUDE.md`/the mockup; no rebrand attempted.*
