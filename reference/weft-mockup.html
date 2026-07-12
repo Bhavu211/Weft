@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weft — Workflow X-Ray</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#0C131B;
+    --surface:#141F2A;
+    --surface-2:#1A2732;
+    --hair:#293947;
+    --hair-soft:#1F2E3A;
+    --ink:#E9F1F6;
+    --muted:#7C91A2;
+    --muted-2:#546779;
+    --signal:#FF5C8A;      /* AI opportunity */
+    --signal-dim:#7d2c47;
+    --flow:#48CFC2;        /* normal transition */
+    --warn:#F2A73B;        /* bottleneck */
+    --ok:#5FD08A;
+    --display:'Space Grotesk',sans-serif;
+    --body:'Inter',sans-serif;
+    --mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--canvas);
+    color:var(--ink);
+    font-family:var(--body);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  .app{
+    max-width:1220px;
+    margin:0 auto;
+    padding:22px 22px 40px;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+    padding-bottom:18px;
+    border-bottom:1px solid var(--hair-soft);
+  }
+  .brand{display:flex;align-items:center;gap:11px;}
+  .logo{
+    width:30px;height:30px;flex:none;position:relative;
+    border:1.5px solid var(--flow);border-radius:7px;
+    display:grid;place-items:center;
+  }
+  .logo::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--signal);}
+  .logo::after{content:"";position:absolute;width:15px;height:1.5px;background:var(--flow);left:-8px;}
+  .brand h1{
+    font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:-.01em;margin:0;
+  }
+  .brand h1 span{color:var(--flow);}
+  .topmeta{
+    margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    font-family:var(--mono);font-size:11px;color:var(--muted);
+  }
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;
+    padding:5px 10px;border:1px solid var(--hair);border-radius:100px;
+    font-family:var(--mono);font-size:11px;color:var(--muted);
+  }
+  .chip .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);}
+  .chip .dot.live{box-shadow:0 0 0 0 rgba(95,208,138,.6);}
+  @media (prefers-reduced-motion: no-preference){
+    .chip .dot.live{animation:beat 2.4s infinite;}
+    @keyframes beat{0%{box-shadow:0 0 0 0 rgba(95,208,138,.5);}70%{box-shadow:0 0 0 6px rgba(95,208,138,0);}100%{box-shadow:0 0 0 0 rgba(95,208,138,0);}}
+  }
+
+  /* ---------- workflow title strip ---------- */
+  .strip{
+    display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;
+    margin:22px 0 16px;
+  }
+  .strip .eyebrow{
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted-2);margin-bottom:8px;
+  }
+  .strip h2{
+    font-family:var(--display);font-weight:600;font-size:26px;letter-spacing:-.02em;margin:0;line-height:1.1;
+  }
+  .stats{display:flex;gap:26px;}
+  .stat .n{font-family:var(--display);font-weight:700;font-size:26px;line-height:1;}
+  .stat .l{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2);margin-top:6px;}
+  .stat.sig .n{color:var(--signal);}
+  .stat.warn .n{color:var(--warn);}
+
+  /* ---------- main layout ---------- */
+  .grid{
+    display:grid;grid-template-columns:1fr 372px;gap:18px;align-items:start;
+  }
+  @media(max-width:920px){.grid{grid-template-columns:1fr;}}
+
+  /* ---------- canvas ---------- */
+  .canvas-wrap{
+    background:
+      radial-gradient(circle at 1px 1px, rgba(255,255,255,.035) 1px, transparent 0) 0 0/26px 26px,
+      linear-gradient(180deg,#0E1620,#0B1119);
+    border:1px solid var(--hair-soft);border-radius:14px;
+    padding:14px;overflow:auto;
+  }
+  .canvas{
+    position:relative;width:100%;min-width:620px;height:430px;
+  }
+  .edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+  .edges path{fill:none;stroke:var(--hair);stroke-width:1.5;vector-effect:non-scaling-stroke;}
+  .edges path.hot{stroke:var(--signal-dim);stroke-dasharray:4 4;}
+
+  .node{
+    position:absolute;transform:translate(-50%,-50%);
+    width:150px;text-align:left;cursor:pointer;
+    background:var(--surface);border:1px solid var(--hair);
+    border-radius:11px;padding:11px 12px;
+    color:var(--ink);font-family:var(--body);
+    transition:border-color .18s, transform .18s, box-shadow .18s;
+  }
+  .node:hover{transform:translate(-50%,-50%) translateY(-2px);border-color:var(--muted-2);}
+  .node:focus-visible{outline:2px solid var(--flow);outline-offset:3px;}
+  .node .idx{
+    font-family:var(--mono);font-size:10px;color:var(--muted-2);letter-spacing:.05em;
+  }
+  .node .nlabel{font-size:12.5px;font-weight:600;line-height:1.28;margin:3px 0 8px;letter-spacing:-.01em;}
+  .node .nsys{
+    font-family:var(--mono);font-size:10px;color:var(--muted);
+    display:flex;align-items:center;gap:5px;
+  }
+  .node .nsys::before{content:"";width:5px;height:5px;border-radius:1px;background:var(--flow);flex:none;}
+  .node.opp{border-color:var(--signal-dim);}
+  .node.opp .nsys::before{background:var(--signal);}
+  .node.bottle{border-color:rgba(242,167,59,.4);}
+  .node.bottle .nsys::before{background:var(--warn);}
+  .node.active{border-color:var(--flow);box-shadow:0 0 0 1px var(--flow), 0 10px 30px -12px rgba(0,0,0,.7);}
+  .node.opp.active{border-color:var(--signal);box-shadow:0 0 0 1px var(--signal),0 10px 30px -12px rgba(0,0,0,.7);}
+
+  .node .tag{
+    position:absolute;top:-8px;right:-6px;
+    font-family:var(--mono);font-size:9px;letter-spacing:.04em;
+    padding:2px 6px;border-radius:100px;text-transform:uppercase;
+  }
+  .node.opp .tag{background:var(--signal);color:#2a0713;}
+  .node.bottle .tag{background:var(--warn);color:#2a1c05;}
+
+  @media (prefers-reduced-motion: no-preference){
+    .node.opp::after{
+      content:"";position:absolute;inset:-1px;border-radius:11px;
+      border:1px solid var(--signal);opacity:0;animation:ring 3.6s infinite;pointer-events:none;
+    }
+    .node.opp.active::after{animation:none;}
+    @keyframes ring{0%{opacity:.5;transform:scale(1);}60%{opacity:0;transform:scale(1.05);}100%{opacity:0;}}
+  }
+
+  .legend{
+    display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;padding-top:12px;
+    border-top:1px solid var(--hair-soft);
+    font-family:var(--mono);font-size:10.5px;color:var(--muted);
+  }
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .legend i{width:9px;height:9px;border-radius:2px;display:inline-block;}
+
+  /* ---------- analysis panel ---------- */
+  .panel{
+    background:var(--surface);border:1px solid var(--hair-soft);border-radius:14px;
+    overflow:hidden;position:sticky;top:18px;
+  }
+  .phead{padding:16px 18px 14px;border-bottom:1px solid var(--hair-soft);}
+  .phead .eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2);}
+  .phead .pidx{font-family:var(--mono);font-size:11px;color:var(--flow);margin-top:9px;}
+  .phead h3{font-family:var(--display);font-weight:600;font-size:18px;letter-spacing:-.01em;margin:5px 0 0;line-height:1.2;}
+  .phead .psys{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:7px;}
+
+  .pbody{padding:16px 18px 18px;}
+  .field{margin-bottom:16px;}
+  .field .flabel{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-2);margin-bottom:8px;}
+  .sigchip{
+    display:inline-block;font-family:var(--mono);font-size:11.5px;
+    padding:6px 11px;border-radius:7px;border:1px solid var(--hair);
+    color:var(--ink);background:var(--surface-2);
+  }
+  .interv{
+    font-family:var(--display);font-weight:500;font-size:15px;letter-spacing:-.01em;
+    color:var(--signal);
+  }
+  .interv.neutral{color:var(--flow);}
+  .interv.warn{color:var(--warn);}
+
+  .meters{display:flex;gap:20px;}
+  .meter .flabel{margin-bottom:8px;}
+  .bars{display:flex;gap:4px;}
+  .bars i{width:20px;height:7px;border-radius:2px;background:var(--hair);}
+  .bars i.on{background:var(--flow);}
+  .meter.impact .bars i.on{background:var(--signal);}
+
+  .suggestion{
+    font-size:13.5px;line-height:1.62;color:#C3D2DD;
+    border-left:2px solid var(--signal);padding:2px 0 2px 13px;
+  }
+  .suggestion.neutral{border-color:var(--flow);}
+  .suggestion.warn{border-color:var(--warn);}
+
+  .actions{display:flex;gap:8px;margin-top:18px;}
+  .btn{
+    font-family:var(--mono);font-size:11.5px;letter-spacing:.02em;cursor:pointer;
+    padding:9px 12px;border-radius:8px;border:1px solid var(--hair);
+    background:transparent;color:var(--ink);transition:.15s;
+  }
+  .btn:hover{border-color:var(--muted-2);}
+  .btn:focus-visible{outline:2px solid var(--flow);outline-offset:2px;}
+  .btn.primary{background:var(--signal);border-color:var(--signal);color:#2a0713;font-weight:600;}
+  .btn.primary:hover{filter:brightness(1.06);}
+  .btn.primary.done{background:var(--ok);border-color:var(--ok);color:#08260f;}
+  .btn.ghost{color:var(--muted);}
+
+  /* ---------- register ---------- */
+  .register{border-top:1px solid var(--hair-soft);padding:15px 18px 17px;}
+  .register .rhead{
+    display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;
+  }
+  .register .rhead .flabel{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-2);margin:0;}
+  .register .count{font-family:var(--mono);font-size:11px;color:var(--signal);}
+  .empty{font-size:12.5px;color:var(--muted-2);line-height:1.55;font-style:normal;}
+  .ritem{
+    display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--hair-soft);
+    font-size:12.5px;
+  }
+  .ritem:last-child{border-bottom:none;}
+  .ritem .rmark{color:var(--ok);font-family:var(--mono);font-size:12px;flex:none;margin-top:1px;}
+  .ritem .rtxt strong{font-weight:600;}
+  .ritem .rtxt em{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--muted);display:block;margin-top:2px;}
+
+  .foot{
+    margin-top:26px;padding-top:16px;border-top:1px solid var(--hair-soft);
+    font-family:var(--mono);font-size:10.5px;color:var(--muted-2);
+    display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"></div>
+      <h1>We<span>ft</span></h1>
+    </div>
+    <div class="topmeta">
+      <span class="chip"><span class="dot live"></span>captured · masked</span>
+      <span>session 04 · 3 systems</span>
+    </div>
+  </div>
+
+  <div class="strip">
+    <div>
+      <div class="eyebrow">Workflow x-ray · as-is</div>
+      <h2>Partner onboarding &amp; KYC</h2>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="n">8</div><div class="l">steps</div></div>
+      <div class="stat sig"><div class="n">6</div><div class="l">AI targets</div></div>
+      <div class="stat warn"><div class="n">42%</div><div class="l">idle time</div></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- CANVAS -->
+    <div class="canvas-wrap">
+      <div class="canvas" id="canvas">
+        <svg class="edges" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M12,22 L37,22"/>
+          <path class="hot" d="M37,22 L62,22"/>
+          <path class="hot" d="M62,22 L87,22"/>
+          <path class="hot" d="M87,22 L87,68"/>
+          <path d="M87,68 L62,68"/>
+          <path d="M62,68 L37,68"/>
+          <path class="hot" d="M37,68 L12,68"/>
+        </svg>
+        <!-- nodes injected by JS -->
+      </div>
+
+      <div class="legend">
+        <span><i style="background:var(--flow)"></i>normal transition</span>
+        <span><i style="background:var(--signal)"></i>AI / automation target</span>
+        <span><i style="background:var(--warn)"></i>bottleneck — idle</span>
+        <span style="color:var(--muted-2)">click a step to analyze →</span>
+      </div>
+    </div>
+
+    <!-- PANEL -->
+    <div class="panel" aria-live="polite">
+      <div class="phead">
+        <div class="eyebrow">Step analysis</div>
+        <div class="pidx" id="p-idx">STEP 03 / 08</div>
+        <h3 id="p-title">Copy PAN &amp; GST to KYC tool</h3>
+        <div class="psys" id="p-sys">→ KYC Suite</div>
+      </div>
+      <div class="pbody">
+        <div class="field">
+          <div class="flabel">Step signature</div>
+          <span class="sigchip" id="p-sig">Copy between systems</span>
+        </div>
+        <div class="field">
+          <div class="flabel">Mapped intervention</div>
+          <div class="interv" id="p-interv">Integration / API bridge</div>
+        </div>
+        <div class="field meters">
+          <div class="meter effort">
+            <div class="flabel">Effort</div>
+            <div class="bars" id="p-effort"><i class="on"></i><i class="on"></i><i></i></div>
+          </div>
+          <div class="meter impact">
+            <div class="flabel">Impact</div>
+            <div class="bars" id="p-impact"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+          </div>
+        </div>
+        <div class="field">
+          <div class="flabel">Recommendation</div>
+          <p class="suggestion" id="p-sugg">Manual re-keying across two systems — a classic error source. An API bridge passes the IDs directly and eliminates transcription errors.</p>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="btn-accept">+ Add to register</button>
+          <button class="btn ghost" id="btn-dismiss">Dismiss</button>
+        </div>
+      </div>
+
+      <div class="register">
+        <div class="rhead">
+          <p class="flabel">Opportunity register</p>
+          <span class="count" id="r-count">0 logged</span>
+        </div>
+        <div id="r-list">
+          <p class="empty">No opportunities logged yet. Walk the map, and add the steps worth pursuing — this list becomes your prioritized output.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>Weft · concept mockup</span>
+    <span>observer-based capture · no credentials stored</span>
+  </div>
+
+</div>
+
+<script>
+const NODES = [
+  {id:1,x:12,y:22,label:"Receive application",sys:"Partner Portal",sig:"Entry point · manual",interv:"— keep manual",cls:"neutral",effort:1,impact:1,
+   sugg:"The human entry point. Low-value automation target — leave it be and spend effort downstream."},
+  {id:2,x:37,y:22,label:"Key partner details",sys:"Partner Portal",sig:"Repetitive · rule-based",interv:"RPA / scripted automation",cls:"opp",effort:2,impact:2,
+   sugg:"The same fields are re-typed the same way every time. Prefilling from the application payload removes ~90% of the keystrokes and the typos that come with them.",opp:true},
+  {id:3,x:62,y:22,label:"Copy PAN & GST to KYC tool",sys:"→ KYC Suite",sig:"Copy between systems",interv:"Integration / API bridge",cls:"opp",effort:2,impact:3,
+   sugg:"Manual re-keying across two systems — a classic error source. An API bridge passes the IDs directly and eliminates transcription errors.",opp:true},
+  {id:4,x:87,y:22,label:"Run KYC verification",sys:"KYC Suite",sig:"Lookup · verification",interv:"Automated validation",cls:"opp",effort:2,impact:3,
+   sugg:"A deterministic check against a source of truth. Auto-clear the matches and route only the mismatches to a human — turns a full-time review into an exception queue.",opp:true},
+  {id:5,x:87,y:68,label:"Interpret KYC report",sys:"KYC Suite",sig:"Judgment on unstructured text",interv:"LLM assist",cls:"opp",effort:3,impact:3,
+   sugg:"A reviewer reads a semi-structured report and forms a view. An LLM can surface the risk flags and draft a recommendation for a human to confirm — the newest of these opportunities to become viable.",opp:true},
+  {id:6,x:62,y:68,label:"Await compliance sign-off",sys:"Compliance · manual",sig:"Wait · handoff",interv:"Process redesign — not tech",cls:"warn",effort:1,impact:3,
+   sugg:"42% of total cycle time is idle right here. This is a policy and SLA problem, not an automation one. Parallelize the handoff or set auto-escalation — resist the urge to throw AI at a queue.",bottle:true},
+  {id:7,x:37,y:68,label:"Approve & provision",sys:"Partner Portal",sig:"Approval · decision",interv:"Policy automation + routing",cls:"opp",effort:3,impact:2,
+   sugg:"Threshold-based sign-off. Low-risk partners can auto-provision under an explicit policy; only exceptions reach a human. Requires a clear risk rubric first.",opp:true},
+  {id:8,x:12,y:68,label:"Update tracking sheet",sys:"→ Ops Spreadsheet",sig:"Copy between systems",interv:"Integration / write-back",cls:"opp",effort:1,impact:2,
+   sugg:"The final state is re-keyed into a spreadsheet by hand. A write-back integration keeps the sheet in sync automatically — low effort, quick win.",opp:true},
+];
+
+const canvas = document.getElementById('canvas');
+const registered = new Set();
+
+// build nodes
+NODES.forEach(n=>{
+  const b=document.createElement('button');
+  b.className='node'+(n.opp?' opp':'')+(n.bottle?' bottle':'');
+  b.style.left=n.x+'%'; b.style.top=n.y+'%';
+  b.setAttribute('aria-label',`Step ${n.id}: ${n.label}`);
+  b.innerHTML =
+    (n.opp?'<span class="tag">AI</span>':'')+
+    (n.bottle?'<span class="tag">idle</span>':'')+
+    `<span class="idx">STEP ${String(n.id).padStart(2,'0')}</span>`+
+    `<span class="nlabel">${n.label}</span>`+
+    `<span class="nsys">${n.sys}</span>`;
+  b.addEventListener('click',()=>select(n.id));
+  b._node=n; b.dataset.id=n.id;
+  canvas.appendChild(b);
+});
+
+const els={
+  idx:document.getElementById('p-idx'), title:document.getElementById('p-title'),
+  sys:document.getElementById('p-sys'), sig:document.getElementById('p-sig'),
+  interv:document.getElementById('p-interv'), effort:document.getElementById('p-effort'),
+  impact:document.getElementById('p-impact'), sugg:document.getElementById('p-sugg'),
+  accept:document.getElementById('btn-accept'), dismiss:document.getElementById('btn-dismiss'),
+  rlist:document.getElementById('r-list'), rcount:document.getElementById('r-count'),
+};
+let current=3;
+
+function bars(el,v){[...el.children].forEach((i,ix)=>i.classList.toggle('on',ix<v));}
+
+function select(id){
+  current=id;
+  const n=NODES.find(x=>x.id===id);
+  document.querySelectorAll('.node').forEach(el=>el.classList.toggle('active',+el.dataset.id===id));
+  els.idx.textContent=`STEP ${String(id).padStart(2,'0')} / 08`;
+  els.title.innerHTML=n.label;
+  els.sys.textContent=n.sys;
+  els.sig.textContent=n.sig;
+  els.interv.textContent=n.interv;
+  els.interv.className='interv '+(n.cls==='opp'?'':n.cls);
+  bars(els.effort,n.effort); bars(els.impact,n.impact);
+  els.sugg.textContent=n.sugg;
+  els.sugg.className='suggestion '+(n.cls==='opp'?'':n.cls);
+
+  const isOpp=!!n.opp;
+  els.accept.style.display=isOpp?'inline-block':'none';
+  els.dismiss.style.display=isOpp?'inline-block':'none';
+  if(isOpp){
+    const done=registered.has(id);
+    els.accept.classList.toggle('done',done);
+    els.accept.textContent=done?'✓ In register':'+ Add to register';
+  }
+}
+
+els.accept.addEventListener('click',()=>{
+  const n=NODES.find(x=>x.id===current); if(!n.opp) return;
+  if(registered.has(current)){registered.delete(current);}else{registered.add(current);}
+  renderRegister(); select(current);
+});
+els.dismiss.addEventListener('click',()=>{
+  if(registered.has(current)){registered.delete(current);renderRegister();select(current);}
+});
+
+function renderRegister(){
+  els.rcount.textContent=`${registered.size} logged`;
+  if(registered.size===0){
+    els.rlist.innerHTML='<p class="empty">No opportunities logged yet. Walk the map, and add the steps worth pursuing — this list becomes your prioritized output.</p>';
+    return;
+  }
+  const items=[...registered].sort((a,b)=>a-b).map(id=>{
+    const n=NODES.find(x=>x.id===id);
+    return `<div class="ritem"><span class="rmark">✓</span><span class="rtxt"><strong>${n.label}</strong><em>${n.interv} · impact ${'●'.repeat(n.impact)}${'○'.repeat(3-n.impact)}</em></span></div>`;
+  }).join('');
+  els.rlist.innerHTML=items;
+}
+
+select(3);
+</script>
+</body>
+</html>
