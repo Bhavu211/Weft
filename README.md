@@ -20,7 +20,7 @@ Full context:
 | M4 — Multi-session merge | ✅ done |
 | M5 — Map + analysis + register | ✅ done |
 | M6 — Brief + ticket export | ✅ done |
-| M7 — ROI tracker | ⬜ not started |
+| M7 — ROI tracker | ✅ done |
 | M8 — Consent + metrics + polish | ⬜ not started |
 
 See `BUILD.md` for each milestone's gate.
