@@ -29,7 +29,23 @@ chrome.runtime.onInstalled.addListener(() => {
 let messageQueue: Promise<unknown> = Promise.resolve();
 
 chrome.runtime.onMessage.addListener((message: WeftMessage, sender, sendResponse) => {
-  messageQueue = messageQueue.then(() => handleMessage(message, sender)).then(sendResponse);
+  const result = messageQueue.then(() => handleMessage(message, sender));
+
+  // `messageQueue` must never become a rejected promise: every later
+  // message chains off it with .then(), which silently skips its callback
+  // once the promise it's chained from is rejected — one failure (e.g. a
+  // chrome.storage.local write rejecting because the extension's storage
+  // quota is full) would otherwise permanently stop the service worker from
+  // handling anything else until it restarts. Recover here instead, and let
+  // only this one message's response fail.
+  messageQueue = result.catch((err) => {
+    console.error(`[Weft] message handling failed for ${message.type}:`, err);
+  });
+
+  result.then(sendResponse, (err) => {
+    console.error(`[Weft] failed to respond to ${message.type}:`, err);
+  });
+
   return true; // keep the message channel open for the async response
 });
 
