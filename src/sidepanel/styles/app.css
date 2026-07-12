@@ -15,7 +15,24 @@ body {
 
 .app h1 {
   font-family: var(--font-display);
+  margin: 0;
+}
+
+.app-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin: 0 0 8px;
+}
+
+.btn-dashboard {
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--hair);
+  font-size: 12px;
+  padding: 6px 10px;
+  white-space: nowrap;
 }
 
 .muted {

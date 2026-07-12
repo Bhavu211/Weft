@@ -79,6 +79,17 @@ export async function getRegister(workflowId: string): Promise<Opportunity[]> {
   return registers[workflowId] ?? [];
 }
 
+// Cross-workflow reads for the dashboard — everything else in this file is
+// scoped to one workflowId at a time.
+export async function getAllSessions(): Promise<Session[]> {
+  return Object.values(await getSessions());
+}
+
+export async function getAllRegisters(): Promise<Record<string, Opportunity[]>> {
+  const result = await chrome.storage.local.get(REGISTERS_KEY);
+  return result[REGISTERS_KEY] ?? {};
+}
+
 export async function saveRegister(workflowId: string, opportunities: Opportunity[]): Promise<void> {
   const result = await chrome.storage.local.get(REGISTERS_KEY);
   const registers: Record<string, Opportunity[]> = result[REGISTERS_KEY] ?? {};

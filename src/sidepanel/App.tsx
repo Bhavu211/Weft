@@ -199,7 +199,16 @@ export default function App() {
 
   return (
     <div className="app">
-      <h1>Weft</h1>
+      <div className="app-header-row">
+        <h1>Weft</h1>
+        <button
+          type="button"
+          className="btn btn-dashboard"
+          onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL("src/dashboard/index.html") })}
+        >
+          Open Dashboard
+        </button>
+      </div>
       <label className="workflow-name-label" htmlFor="workflow-name">
         Workflow
       </label>

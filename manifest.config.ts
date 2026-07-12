@@ -35,4 +35,15 @@ export default defineManifest({
       run_at: "document_idle",
     },
   ],
+  // The Process Intelligence dashboard (Dashboard 1) is a full-tab page, not
+  // part of the side panel — a dashboard's executive-summary/KPI-grid
+  // layouts need real screen width. Declaring it here (rather than only
+  // linking to it) is what gets @crxjs/vite-plugin to bundle it as a build
+  // input at all, since nothing else in the manifest references it.
+  web_accessible_resources: [
+    {
+      resources: ["src/dashboard/index.html"],
+      matches: ["<all_urls>"],
+    },
+  ],
 });
