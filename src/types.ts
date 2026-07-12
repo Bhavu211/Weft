@@ -108,11 +108,13 @@ export interface Opportunity {
   label: string;
   intervention: string;
   impact: 1 | 2 | 3;
-  brief: AutomationBrief;
+  brief?: AutomationBrief; // generated in M6; a freshly-added opportunity has none yet
   status: "identified" | "specced" | "shipped";
   estimatedSavingHrs: number;
   realizedSavingHrs?: number;
 }
+
+export type Thumb = "up" | "down";
 
 export interface ROI {
   shippedCount: number;

@@ -213,3 +213,180 @@ body {
   padding-left: 16px;
   font-size: 11px;
 }
+
+.merge-review {
+  margin-top: 16px;
+}
+
+.merge-review summary {
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.workflow-map {
+  height: 320px;
+  margin-top: 16px;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.step-node {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--hair);
+  min-width: 140px;
+  font-family: var(--font-body);
+}
+
+.step-node-label {
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.step-node-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.step-node-normal {
+  border-color: var(--hair);
+}
+
+.step-node-opportunity {
+  border-color: var(--signal);
+}
+
+.step-node-bottleneck {
+  border-color: var(--warn);
+}
+
+.step-node-exception {
+  border-style: dashed;
+  border-color: var(--signal);
+}
+
+.step-node-active {
+  box-shadow: 0 0 0 2px var(--ink);
+}
+
+.analysis-panel {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: 8px;
+}
+
+.analysis-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.analysis-panel h2 {
+  font-family: var(--font-display);
+  font-size: 15px;
+  margin: 2px 0 4px;
+}
+
+.analysis-field {
+  margin-top: 10px;
+}
+
+.analysis-flabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.sig-chip {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: var(--surface-2);
+  border: 1px solid var(--hair);
+}
+
+.analysis-meters {
+  display: flex;
+  gap: 24px;
+}
+
+.meter-bars {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.meter-bar,
+.meter-bar-on {
+  display: inline-block;
+  width: 14px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--hair);
+}
+
+.meter-bar-on {
+  background: var(--signal);
+}
+
+.analysis-suggestion {
+  font-size: 13px;
+  margin: 0;
+}
+
+.analysis-thumbs {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.btn-thumb {
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 1px solid var(--hair);
+}
+
+.btn-thumb-active {
+  color: var(--ink);
+  border-color: var(--flow);
+}
+
+.analysis-actions {
+  margin-top: 12px;
+}
+
+.register {
+  margin-top: 16px;
+}
+
+.register-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.register-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.register-item {
+  position: relative;
+}
+
+.register-remove {
+  align-self: flex-end;
+  padding: 3px 8px;
+  font-size: 11px;
+}

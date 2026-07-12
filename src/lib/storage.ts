@@ -1,7 +1,9 @@
-import type { CapturedEvent, Session } from "../types";
+import type { CapturedEvent, Opportunity, Session, Thumb } from "../types";
 
 const SESSIONS_KEY = "weft_sessions";
 const ACTIVE_SESSION_KEY = "weft_active_session_id";
+const REGISTERS_KEY = "weft_registers";
+const FEEDBACK_KEY = "weft_feedback";
 
 export async function getSessions(): Promise<Record<string, Session>> {
   const result = await chrome.storage.local.get(SESSIONS_KEY);
@@ -47,4 +49,30 @@ export async function deleteSession(sessionId: string): Promise<void> {
 export async function getReviewedSessionsForWorkflow(workflowId: string): Promise<Session[]> {
   const sessions = await getSessions();
   return Object.values(sessions).filter((session) => session.workflowId === workflowId && session.reviewed);
+}
+
+export async function getRegister(workflowId: string): Promise<Opportunity[]> {
+  const result = await chrome.storage.local.get(REGISTERS_KEY);
+  const registers: Record<string, Opportunity[]> = result[REGISTERS_KEY] ?? {};
+  return registers[workflowId] ?? [];
+}
+
+export async function saveRegister(workflowId: string, opportunities: Opportunity[]): Promise<void> {
+  const result = await chrome.storage.local.get(REGISTERS_KEY);
+  const registers: Record<string, Opportunity[]> = result[REGISTERS_KEY] ?? {};
+  registers[workflowId] = opportunities;
+  await chrome.storage.local.set({ [REGISTERS_KEY]: registers });
+}
+
+// Thumbs feedback per merged node, keyed by that node's id (see FR-15 — a
+// quality signal, never an individual performance metric).
+export async function getFeedback(): Promise<Record<string, Thumb>> {
+  const result = await chrome.storage.local.get(FEEDBACK_KEY);
+  return result[FEEDBACK_KEY] ?? {};
+}
+
+export async function setFeedback(nodeId: string, thumb: Thumb): Promise<void> {
+  const feedback = await getFeedback();
+  feedback[nodeId] = thumb;
+  await chrome.storage.local.set({ [FEEDBACK_KEY]: feedback });
 }
